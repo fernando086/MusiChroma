@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layoutDatosPrediccion"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_light"
+    tools:context=".DatosPrediccionActivity">
+
+    <LinearLayout
+        android:id="@+id/CuadroPrincipal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="?android:attr/colorBackground">
+
+        <!-- 🔹 Encabezado -->
+        <LinearLayout
+            android:id="@+id/topBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:background="?attr/colorPrimary">
+
+            <ImageView
+                android:id="@+id/btnBack"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:clickable="true"
+                android:contentDescription="Volver"
+                android:src="@drawable/iconoretroceder"
+                tools:ignore="TouchTargetSizeCheck" />
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="PREDICCIONES"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btnInfo"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:contentDescription="Información"
+                android:src="@drawable/iconoinformacion" />
+        </LinearLayout>
+
+        <!-- 🔹 Fila 1: Icono + Nombre + Autor + Progreso/Duración -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:gravity="center_vertical">
+
+            <!-- Icono nota musical -->
+            <ImageView
+                android:id="@+id/iconoCancion"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:src="@drawable/nota_musical"
+                android:padding="8dp" />
+
+            <!-- Contenedor textos -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:paddingStart="8dp">
+
+                <TextView
+                    android:id="@+id/tvNombreCancion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nombre de la canción"
+                    android:textSize="16sp"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAutorCancion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Autor"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvAlbumCancion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Álbum"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Progreso/Duración -->
+            <TextView
+                android:id="@+id/tvProgresoDuracion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:00 / 00:00"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorPrimary"
+                android:gravity="end" />
+        </LinearLayout>
+
+        <!-- 🔹 Fila 2: Texto de emoción -->
+        <TextView
+            android:id="@+id/tvEmocionActual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Emoción actual"
+            android:textAlignment="center"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:padding="8dp" />
+
+        <!-- 🔹 Fila 3: SeekBar + thumbs -->
+        <FrameLayout
+            android:id="@+id/seekbar_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp">
+
+            <SeekBar
+                android:id="@+id/seekBar_prediccion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:progressDrawable="@drawable/seekbar_track"
+                android:thumb="@drawable/seekbar_thumb_datosmusic"
+                android:thumbOffset="0dp" />
+
+            <RelativeLayout
+                android:id="@+id/thumbs_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignBottom="@id/seekBar_prediccion" />
+        </FrameLayout>
+
+        <!-- 🔹 Fila 4: Controles del reproductor -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <ImageButton
+                android:id="@+id/btn_rewind_prediccion"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/iconoretrocedercancion" />
+
+            <ImageButton
+                android:id="@+id/btn_play_pause_prediccion"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:background="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/iconoplay" />
+
+            <ImageButton
+                android:id="@+id/btn_forward_prediccion"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@null"
+                android:scaleType="fitCenter"
+                android:src="@drawable/iconoadelantarcancion" />
+        </LinearLayout>
+
+        <!-- 🔹 Fila 5: Cuadro con lista de secciones + botones -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <!-- RecyclerView de secciones -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_secciones_prediccion"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:scrollbars="vertical" />
+
+            <!-- Botones inferiores -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <Button
+                    android:id="@+id/btn_cancelar_prediccion"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Cancelar"
+                    android:backgroundTint="#FF0000"
+                    android:textColor="@color/white" />
+
+                <Button
+                    android:id="@+id/btn_confirmar_prediccion"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Confirmar"
+                    android:backgroundTint="#00FF00"
+                    android:textColor="@color/white" />
+            </LinearLayout>
+
+            <!-- Quinta fila: Selector de edición entre inicio y fin -->
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Pantalla de carga -->
+    <include layout="@layout/pantalla_carga"/>
+</FrameLayout>

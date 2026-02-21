@@ -1,0 +1,14 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Color de la barra vertical -->
+    <solid android:color="@android:color/darker_gray" />
+
+    <!-- Tamaño de la barra vertical -->
+    <size
+        android:width="2dp"
+        android:height="126dp" /> <!-- Ajusta este valor para que sea proporcional -->
+
+    <!-- Bordes redondeados -->
+    <corners android:radius="2dp" />
+</shape>

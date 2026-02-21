@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layoutDatosSesion"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    tools:context=".DatosSesionesActivity">
+
+    <!-- Barra Superior -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/colorPrimary">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="start"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Volver"
+            android:src="@drawable/iconoretroceder" />
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="DATOS DE SESIÓN - ID"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/btnInfo"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="end"
+            android:contentDescription="Información"
+            android:src="@drawable/iconoinformacion" />
+    </LinearLayout>
+
+    <!-- Menú de pestañas deslizable (debajo de la barra superior) -->
+    <HorizontalScrollView
+        android:id="@+id/scrollPestanas"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_below="@id/topBar"
+        android:background="?android:attr/colorBackground"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/menuPestanas"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/tabGenerales"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Generales"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <Button
+                android:id="@+id/tabObjetivos"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Objetivos"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <Button
+                android:id="@+id/tabTecnicas"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Técnicas"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <Button
+                android:id="@+id/tabMateriales"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Materiales"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <Button
+                android:id="@+id/tabDesarrollo"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Desarrollo"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <Button
+                android:id="@+id/tabObservaciones"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Observaciones"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <Button
+                android:id="@+id/tabLogros"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Logros"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <Button
+                android:id="@+id/tabExtras"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Extras"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Texto de advertencia -->
+    <TextView
+        android:id="@+id/textoDebajoBotones"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/scrollPestanas"
+        android:layout_centerHorizontal="true"
+        android:text="Por favor considere EVITAR el ingreso de datos personales."
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+    <!-- ViewPager2 para contenido deslizable -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/textoDebajoBotones"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginTop="8dp" />
+
+    <!-- Pantalla de carga -->
+    <include layout="@layout/pantalla_carga"/>
+
+</RelativeLayout>

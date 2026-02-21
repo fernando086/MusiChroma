@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:gravity="center_vertical">
+
+    <!-- RadioButton para seleccionar la marca a mover -->
+    <RadioButton
+        android:id="@+id/rb_seccion"
+        android:layout_width="30dp"
+        android:layout_height="wrap_content"
+        android:buttonTint="?attr/colorControlNormal"
+        android:focusable="false"
+        android:focusableInTouchMode="false" />
+
+    <!-- Texto de la sección -->
+    <TextView
+        android:id="@+id/tv_numero_seccion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="8dp"
+        android:text="Sección 1:"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="16sp" />
+
+    <!-- EditText de inicio de la sección -->
+
+    <!-- Guion separador -->
+    <EditText
+        android:id="@+id/et_inicio_seccion"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/border_edittext"
+        android:focusableInTouchMode="true"
+        android:gravity="center"
+        android:imeOptions="actionDone"
+        android:inputType="text"
+        android:maxLines="1"
+        android:selectAllOnFocus="true"
+        android:textColor="@color/black"
+        android:textSize="14sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="8dp"
+        android:text="-"
+        android:textColor="@color/black"
+        android:textSize="16sp" />
+
+    <!-- EditText de fin de la sección -->
+    <EditText
+        android:id="@+id/et_fin_seccion"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/border_edittext"
+        android:gravity="center"
+        android:inputType="text"
+        android:imeOptions="actionDone"
+        android:maxLines="1"
+        android:textColor="@color/black"
+        android:textSize="14sp"
+        android:selectAllOnFocus="true"
+        android:focusableInTouchMode="true" />
+
+    <!-- Botón para eliminar la sección -->
+    <ImageButton
+        android:id="@+id/btn_eliminar_seccion"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:adjustViewBounds="true"
+        android:background="@null"
+        android:scaleType="fitCenter"
+        android:src="@drawable/iconoquitarseccion" />
+</LinearLayout>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#5C4C6F</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#584F6D</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Agrega estos nuevos colores -->
+    <color name="background_light">#FFFFFFFF</color>
+    <color name="background_dark">#121212</color>
+    <color name="text_color_light">#FF000000</color>
+    <color name="text_color_dark">#FFFFFFFF</color>
+    <color name="surface_color">#FFFFFFFF</color>
+    <color name="surface_color_dark">#1E1E1E</color>
+
+    <color name="item_seleccionado">#FFE0B2</color> <!-- naranja claro, puedes personalizar -->
+
+    <!-- Reemplázalas con: -->
+    <color name="radio_button_tint">#FF000000</color> <!-- Negro para modo claro -->
+    <color name="check_box_tint">#FF000000</color> <!-- Negro para modo claro -->
+    <color name="radio_button_tint_dark">#FF000000</color> <!-- Respaldo -->
+    <color name="check_box_tint_dark">#FF000000</color> <!-- Respaldo -->
+
+    <color name="colorPrimary">#9F5DFF</color> <!-- o el color que quieras -->
+
+    <color name="icon_color">#FF000000</color> <!-- Negro por defecto -->
+
+    <color name="divider_color">#33000000</color> <!-- Negro semitransparente -->
+
+    <color name="circle_background">#FFFFFF</color> <!-- Modo claro -->
+
+    <!-- 🎨 Colores basados en la rueda de Plutchik -->
+
+    <!-- Ira (Anger) - Rojo -->
+    <color name="rojo_claro">#f59797</color> <!-- bajo -->
+    <color name="rojo_normal">#d40001</color> <!-- medio -->
+    <color name="rojo_oscuro">#7b0000</color> <!-- alto -->
+
+    <!-- Miedo (Fear) - Turquesa -->
+    <color name="turquesa_claro">#9de8d4</color> <!-- bajo -->
+    <color name="turquesa_normal">#12936c</color> <!-- medio -->
+    <color name="turquesa_oscuro">#0b6049</color> <!-- alto -->
+
+    <!-- Alegría (Joy) - Amarillo -->
+    <color name="amarillo_claro">#fff2a6</color> <!-- bajo -->
+    <color name="amarillo_normal">#fed401</color> <!-- medio -->
+    <color name="amarillo_oscuro">#b39500</color> <!-- alto -->
+
+    <!-- Tristeza (Sadness) - Morado -->
+    <color name="morado_claro">#d3a6ff</color> <!-- bajo -->
+    <color name="morado_normal">#7b06ea</color> <!-- medio -->
+    <color name="morado_oscuro">#49008f</color> <!-- alto -->
+
+    <!-- Anticipación (Anticipation) - Naranja -->
+    <color name="naranja_claro">#ffc48a</color> <!-- bajo -->
+    <color name="naranja_normal">#ff7901</color> <!-- medio -->
+    <color name="naranja_oscuro">#b35400</color> <!-- alto -->
+
+    <!-- Sorpresa (Surprise) - Azul -->
+    <color name="azul_claro">#9cc2ff</color> <!-- bajo -->
+    <color name="azul_normal">#2b7ffe</color> <!-- medio -->
+    <color name="azul_oscuro">#0046b3</color> <!-- alto -->
+
+    <!-- Confianza (Trust) - Verde -->
+    <color name="verde_claro">#98f0a6</color> <!-- bajo -->
+    <color name="verde_normal">#28a000</color> <!-- medio -->
+    <color name="verde_oscuro">#156000</color> <!-- alto -->
+
+    <!-- Asco (Disgust) - Rosado púrpura -->
+    <color name="rosado_claro">#e7aaf9</color> <!-- bajo -->
+    <color name="rosado_normal">#ae0be5</color> <!-- medio -->
+    <color name="rosado_oscuro">#65007f</color> <!-- alto -->
+
+    <!-- Neutro -->
+    <color name="gris_neutro">#B0B0B0</color>
+
+    <color name="popup_background">#FFFFFFFF</color> <!-- Fondo blanco en modo claro -->
+    <color name="popup_border">#FF000000</color> <!-- Borde negro en modo claro -->
+    <color name="box_background_color">#FFFFFFFF</color>
+
+
+</resources>

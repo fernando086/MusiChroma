@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="?attr/colorSurface"
+    android:elevation="8dp">
+
+    <!-- Primera fila: SeekBar con la canción actual -->
+    <!-- Primera fila (actualizada): Contenedor para el SeekBar y los thumbs adicionales -->
+    <FrameLayout
+        android:id="@+id/seekbar_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- SeekBar de la canción actual -->
+        <SeekBar
+            android:id="@+id/seekBar_popup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:progressDrawable="@drawable/seekbar_track"
+            android:thumb="@drawable/seekbar_thumb_datosmusic"
+            android:thumbOffset="0dp" />
+
+        <!-- Contenedor para thumbs adicionales -->
+        <RelativeLayout
+            android:id="@+id/thumbs_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@id/seekBar_popup">
+        </RelativeLayout>
+
+    </FrameLayout>
+
+    <!-- Segunda fila: Controles del reproductor -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingVertical="8dp">
+
+        <TextView
+            android:id="@+id/tv_progress_popup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <ImageButton
+            android:id="@+id/btn_rewind_popup"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@null"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            android:src="@drawable/iconoretrocedercancion" />
+
+        <ImageButton
+            android:id="@+id/btn_play_pause_popup"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@null"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            android:src="@drawable/iconoplay" />
+
+        <ImageButton
+            android:id="@+id/btn_forward_popup"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@null"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            android:src="@drawable/iconoadelantarcancion" />
+
+        <TextView
+            android:id="@+id/tv_duration_popup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary" />
+    </LinearLayout>
+
+    <!-- Tercera fila: Lista de secciones -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_secciones"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scrollbars="vertical"
+        android:background="?attr/colorSurface"
+        android:padding="8dp" />
+
+    <!-- Cuarta fila: Botones de acción -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="?android:attr/colorBackground">
+
+        <Button
+            android:id="@+id/btn_cancelar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Cancelar"
+            android:backgroundTint="#FF0000"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/btn_agregar_seccion"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Agregar sección"
+            android:backgroundTint="#0000FF"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/btn_confirmar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Confirmar"
+            android:backgroundTint="#00FF00"
+            android:textColor="@color/white" />
+    </LinearLayout>
+
+    <!-- Quinta fila: Selector de edición entre inicio y fin -->
+    <LinearLayout
+        android:id="@+id/fila_selector_edicion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/tv_selector_inicio"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Inicio sección"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:layout_centerInParent="true"
+            android:orientation="horizontal" >
+
+            <Switch
+                android:id="@+id/switch_editar_inicio_o_fin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:showText="false"
+                android:thumbTint="@color/teal_200"
+                android:trackTint="@color/teal_700"
+                tools:ignore="UseSwitchCompatOrMaterialXml" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/tv_selector_fin"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Final sección"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary" />
+    </LinearLayout>
+</LinearLayout>

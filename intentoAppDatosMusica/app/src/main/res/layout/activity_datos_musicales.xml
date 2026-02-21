@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    tools:context=".DatosMusicalesActivity">
+
+    <!-- Barra Superior -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/colorPrimary">
+
+        <!-- Botón Volver -->
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="start"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Volver"
+            android:src="@drawable/iconoretroceder" />
+
+        <!-- Título -->
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="DATOS MUSICALES"
+            android:textColor="@color/white"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- Botón Información -->
+        <ImageView
+            android:id="@+id/btnInfo"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="end"
+            android:contentDescription="Información"
+            android:src="@drawable/iconoinformacion" />
+    </LinearLayout>
+
+    <!-- Menú de pestañas (fijo debajo de la barra superior) -->
+    <LinearLayout
+        android:id="@+id/menuPestanas"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_below="@id/topBar"
+        android:background="?android:attr/colorBackground"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/tabGenerales"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="?attr/colorPrimary"
+            android:text="Generales"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/tabSecciones"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="?attr/colorPrimary"
+            android:text="Secciones"
+            android:textColor="@color/white" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/textoDebajoBotones"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/menuPestanas"
+        android:layout_centerHorizontal="true"
+        android:text="Por favor considere EVITAR el ingreso de datos personales."
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:gravity="center"/>
+
+    <!-- ViewPager2 para contenido deslizable con animaciones -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/textoDebajoBotones"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginTop="8dp" />
+
+</RelativeLayout>

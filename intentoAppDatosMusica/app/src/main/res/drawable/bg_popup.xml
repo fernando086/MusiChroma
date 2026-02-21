@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Fondo dinámico según tema -->
+    <solid android:color="@color/popup_background" />
+
+    <!-- Borde dinámico -->
+    <stroke
+        android:width="2dp"
+        android:color="@color/popup_border" />
+
+    <!-- Esquinas redondeadas -->
+    <corners android:radius="12dp" />
+
+    <!-- Sombra -->
+    <padding
+        android:left="8dp"
+        android:right="8dp"
+        android:top="8dp"
+        android:bottom="8dp" />
+</shape>

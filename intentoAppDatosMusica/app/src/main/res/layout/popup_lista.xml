@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/popup_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="@drawable/popup_background"
+    android:gravity="center_horizontal">
+
+    <!-- Título centrado -->
+    <TextView
+        android:id="@+id/tv_titulo_popup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Título de la lista"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Subtítulo centrado -->
+    <TextView
+        android:id="@+id/tv_subtitulo_popup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Subtítulo descriptivo"
+        android:textSize="16sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:gravity="center"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Contador Global -->
+    <TextView
+        android:id="@+id/tv_contador_seleccionados"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Total: 0/10"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="4dp"
+        android:gravity="center" />
+
+    <!-- Contador Local -->
+    <TextView
+        android:id="@+id/tv_contador_local_popup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="En esta lista: 0/0"
+        android:textSize="12sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="8dp"
+        android:gravity="center" />
+
+    <!-- Checkbox para filtrar seleccionados -->
+    <CheckBox
+        android:id="@+id/cb_filtrar_seleccionados"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Mostrar solo seleccionados"
+        android:layout_gravity="start"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Buscador -->
+    <EditText
+        android:id="@+id/et_buscador_popup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Buscar..."
+        android:textColor="@color/black"
+        android:drawableStart="@android:drawable/ic_menu_search"
+        android:padding="10dp"
+        android:background="@android:drawable/editbox_background"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Lista de Checkboxes -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_lista_popup"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:scrollbars="vertical" />
+
+    <!-- Footer con botones -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btn_cancelar_popup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancelar"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+        <Button
+            android:id="@+id/btn_aceptar_popup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Aceptar"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+
+    </LinearLayout>
+
+</LinearLayout>

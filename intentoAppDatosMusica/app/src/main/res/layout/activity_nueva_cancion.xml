@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layoutNuevaCancion"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_light">
+
+    <LinearLayout
+        android:id="@+id/CuadroPrincipal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/background_light">
+
+        <!-- 🔹 Top Bar similar a activity_datos_musicales -->
+        <LinearLayout
+            android:id="@+id/topBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:background="?attr/colorPrimary">
+
+            <!-- Botón Volver -->
+            <ImageView
+                android:id="@+id/btnBack"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="start"
+                android:clickable="true"
+                android:contentDescription="Volver"
+                android:focusable="true"
+                android:src="@drawable/iconoretroceder"
+                tools:ignore="TouchTargetSizeCheck" />
+
+            <!-- Título -->
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="NUEVA CANCIÓN"
+                android:textColor="?android:attr/textColorPrimary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <!-- Botón Información -->
+            <ImageView
+                android:id="@+id/btnInfo"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="end"
+                android:contentDescription="Información"
+                android:src="@drawable/iconoinformacion" />
+        </LinearLayout>
+
+        <!-- 🔹 Contenido principal -->
+        <LinearLayout
+            android:id="@+id/layoutContenido"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:padding="20dp"
+            android:background="?android:attr/colorBackground">
+
+            <!-- Parte superior: opción archivo -->
+            <LinearLayout
+                android:id="@+id/layoutArchivo"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@android:color/transparent"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/textArchivo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Toca este ícono para agregar el audio"
+                    android:textSize="16sp" />
+
+                <ImageButton
+                    android:id="@+id/btnSeleccionarArchivo"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/nota_musical"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Seleccionar archivo"
+                    android:layout_marginTop="10dp"
+                    android:scaleType="fitCenter" />
+
+                <TextView
+                    android:id="@+id/textFormatos"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Formatos permitidos: mp3, wav, ogg"
+                    android:textSize="14sp"
+                    android:layout_marginTop="10dp" />
+            </LinearLayout>
+
+            <!-- Línea divisoria con botón de cruz -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="8dp">
+
+                <!-- Línea horizontal -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="2dp"
+                    android:layout_gravity="center"
+                    android:background="?attr/iconTint" />
+
+                <!-- Botón circular con cruz, centrado y sobre la línea -->
+                <ImageButton
+                    android:id="@+id/btnConfirmar"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/boton_agregar_2"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Confirmar"
+                    android:scaleType="fitCenter"
+                    android:elevation="6dp" />
+            </FrameLayout>
+
+            <!-- Parte inferior: opción enlace -->
+            <LinearLayout
+                android:id="@+id/layoutEnlace"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@android:color/transparent"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/textEnlace"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pega un enlace de YouTube"
+                    android:textSize="16sp" />
+
+                <EditText
+                    android:id="@+id/editTextEnlace"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="https://youtube.com/..."
+                    android:padding="12dp"
+                    android:layout_marginTop="10dp" />
+
+                <TextView
+                    android:id="@+id/textInstruccion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="No se permiten enlaces con restricción de edad."
+                    android:textSize="14sp"
+                    android:gravity="center"
+                    android:layout_marginTop="10dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+    <include layout="@layout/pantalla_carga"/>
+</FrameLayout>

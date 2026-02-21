@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">MusiChroma</string>
+    <string name="registrarse">Registrarse</string>
+    <string name="bienvenido">Bienvenido</string>
+    <string name="iniciar_sesi_n">Iniciar Sesión</string>
+    <string name="logodeaplicacion">logodeaplicacion</string>
+    <string name="default_web_client_id">1093017798002-rdj9hkn5urn8vs267e50isafqh4k7gj4.apps.googleusercontent.com</string>
+    <string name="title_activity_menu_principal">MenuPrincipalActivity</string>
+    <string name="interfaz_nueva">interfaz nueva</string>
+    <string name="cerrar_sesi_n">Cerrar Sesión</string>
+    <string name="favoritos">Favoritos</string>
+    <string name="cambiar_usuario">Cambiar usuario</string>
+    <string name="sincronizar">Sincronizar</string>
+    <string name="tutorial">Tutorial</string>
+    <string name="open_drawer">Abrir menú</string>
+    <string name="close_drawer">Cerrar menú</string>
+    <string name="nombre_de_usuario">Nombre de usuario</string>
+    <string name="email_ejemplo_com">email@ejemplo.com</string>
+    <string name="add_song">agregar canción</string>
+    <string name="cerrar_sesión">Cerrar sesión</string>
+    <string name="nombreapp">MusiChroma</string>
+</resources>
