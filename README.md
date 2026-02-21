@@ -19,7 +19,7 @@ MusiChroma is an innovative application designed for music therapy and education
 * **Audio Processing:** `yt-dlp` & FFmpeg (for downloading and extracting YouTube audio), `pydub`.
 * **Machine Learning Inference:** TensorFlow, Keras, Librosa, NumPy, Joblib.
 
-### 🧠 Machine Learning & Data Science (`intento9_metodoseccionarcancion.ipynb`)
+### 🧠 Machine Learning & Data Science (`pipeline_russell.ipynb`)
 * **Core Libraries:** TensorFlow 2.10.0 (CNN + GRU architectures), Keras, NumPy, Pandas.
 * **Audio Feature Extraction:** Librosa (extracting 102 features including Mel spectrograms, MFCC, Chroma CQT, and Spectral data).
 * **Data Pipeline:** TFRecords (for efficient, compressed storage of audio windows and continuous valence/arousal labels).
