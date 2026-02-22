@@ -41,8 +41,12 @@ If you want to run this prototype locally, follow these steps to set up the back
 1. Clone this repository to your local machine.
 2. Navigate to the `flask-backend` directory and install the required dependencies (e.g., `pip install -r requirements.txt` or install manually).
 3. Create a PostgreSQL database named `intento_aplicacionmovil_android` and configure the user/password to match the `app_musica.py` connection string.
-4. Place your Firebase Admin SDK JSON credentials file in the root directory and update the path in the Flask app.
-5. Run the server:
+4. Import the provided schema and seed data into your database:
+   ```bash
+   psql -U admin_fernando -d intento_aplicacionmovil_android -f flask-backend/schema.sql
+   ```
+5. Place your Firebase Admin SDK JSON credentials file in the root directory and update the path in the Flask app.
+6. Run the server:
    ```bash
    python app_musica.py
    ```
