@@ -641,6 +641,7 @@ def procesar_audio_desde_enlace(enlace_youtube):
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(tempfile.gettempdir(), '%(id)s.%(ext)s'),
             'quiet': True,
+            'extractor_args': {'youtube': ['player_client=android,web']}, # Bypasses 403 issue
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'wav',
@@ -682,7 +683,7 @@ def procesar_audio_desde_enlace(enlace_youtube):
         print(f"❌ Error procesando audio desde enlace: {e}")
         import traceback
         traceback.print_exc()
-        return [{"inicio": 0.0, "fin": 10.0, "valence": 0.5, "arousal": 0.5}]
+        return [{"tiempo_inicio": 0.0, "tiempo_final": 10.0, "valence": 0.5, "arousal": 0.5}]
     
 def procesar_audio_sin_ffmpeg(enlace_youtube):
     """
@@ -695,6 +696,7 @@ def procesar_audio_sin_ffmpeg(enlace_youtube):
         ydl_opts = {
             'format': 'bestaudio[ext=m4a]/bestaudio',
             'outtmpl': os.path.join(tempfile.gettempdir(), '%(id)s.%(ext)s'),
+            'extractor_args': {'youtube': ['player_client=android,web']},
             'quiet': True,
         }
         
@@ -720,7 +722,7 @@ def procesar_audio_sin_ffmpeg(enlace_youtube):
         
     except Exception as e:
         print(f"❌ Error en método alternativo: {e}")
-        return [{"inicio": 0.0, "fin": 10.0, "valence": 0.5, "arousal": 0.5}]
+        return [{"tiempo_inicio": 0.0, "tiempo_final": 10.0, "valence": 0.5, "arousal": 0.5}]
     
 @app.route('/api/subir_enlace', methods=['POST'])
 def subir_enlace():
@@ -736,13 +738,15 @@ def subir_enlace():
         import os
 
         # 🔹 Ruta absoluta al archivo de cookies
-        cookie_path = os.path.join(os.path.dirname(__file__), "www.youtube.com_cookies (6).txt")
+        cookie_path = os.path.join(os.path.dirname(__file__), "www.youtube.com_cookies.txt")
 
         # 🔹 Verifica que el archivo exista antes de continuar
         if not os.path.exists(cookie_path):
             print("⚠️ Advertencia: No se encontró el archivo de cookies:", cookie_path)
+            cookie_file_arg = None
         else:
             print("✅ Archivo de cookies detectado:", cookie_path)
+            cookie_file_arg = cookie_path
 
         # Extraer información usando yt-dlp
         ydl_opts = {
@@ -750,15 +754,27 @@ def subir_enlace():
             'skip_download': True, # No descargar el video
             'forcejson': True, # Forzar salida en JSON
             'extract_flat': False, # Extraer información completa
-            'cookiefile': cookie_path,   # 👈 AÑADIDO AQUÍ
+            'extractor_args': {'youtube': ['player_client=android,web']}, # Evitar error 403
+            'format': 'bestaudio/best', # Pedir directamente el mejor audio para evitar que busque formatos que requieren firmas complejas
+            'ignoreerrors': True, # Continuar incluso si falla en obtener algún formato específico
         }
+        
+        # Agregamos cookies solo si existen para evitar crasheos si se borran
+        if cookie_file_arg:
+            ydl_opts['cookiefile'] = cookie_file_arg
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(enlace, download=False)
+            # Añadir process=False es la clave: extrae metadatos (título, autor)
+            # sin intentar resolver las firmas de los formatos de video/audio.
+            info = ydl.extract_info(enlace, download=False, process=False)
+            
+        if info is None:
+            info = {}
+            print("⚠️ yt-dlp devolvió None al extraer metadatos. Se usarán valores desconocidos temporales.")
 
-        nombre = info.get('title', '')
+        nombre = info.get('title', 'Unknown Title')
         print("subir_enlace: titulo de enlace youtube: ", nombre)
-        autor = info.get('uploader', '')
+        autor = info.get('uploader', 'Unknown Author')
         album = info.get('album', None)
         duracion_segundos = info.get('duration', 0)
         duracion_time = str(datetime.timedelta(seconds=duracion_segundos))  # HH:MM:SS
@@ -768,8 +784,14 @@ def subir_enlace():
 
         print("ENLACE EXTRAÍDO:", nombre, autor, album, duracion_time)
         print("[Predicciones por Secciones]:")
+        
+        # Validación extra: si procesar_audio_desde_enlace falla, retorna una predicción default válida
+        if not secciones_predicciones or len(secciones_predicciones) == 0:
+            print("⚠️ Advertencia: No se obtuvieron predicciones válidas, utilizando valor por defecto.")
+            secciones_predicciones = [{"tiempo_inicio": 0.0, "tiempo_final": max(10.0, duracion_segundos), "valence": 0.5, "arousal": 0.5}]
+            
         for i, seccion in enumerate(secciones_predicciones):
-            print(f"  Sección {i+1}: {seccion['tiempo_inicio']:.1f}s - {seccion['tiempo_final']:.1f}s | V={seccion['valence']:.4f}, A={seccion['arousal']:.4f}")
+            print(f"  Sección {i+1}: {seccion.get('tiempo_inicio', 0):.1f}s - {seccion.get('tiempo_final', 10):.1f}s | V={seccion.get('valence', 0.5):.4f}, A={seccion.get('arousal', 0.5):.4f}")
 
         # 🔹 NO guardar en base de datos - solo retornar metadatos y predicciones
         import time
@@ -789,7 +811,7 @@ def subir_enlace():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Error descargando audio (403 Forbidden). Intenta actualizar cookies. Detalle: {str(e)}"}), 500
 
 @app.route('/api/sesion/delete', methods=['POST'])
 def eliminar_sesion():
@@ -1464,7 +1486,7 @@ def predecir_audio_por_secciones(audio_bytes):
         # Intentar segmentación automática, si falla usar fija
         try:
             mfcc = librosa.feature.mfcc(y=y_full, sr=sr)
-            bound_frames = librosa.segment.agglomerative(mfcc, k=8) # 8 secciones aprox
+            bound_frames = librosa.segment.agglomerative(mfcc, k=10) # 10 secciones aprox
             bounds = librosa.frames_to_time(bound_frames, sr=sr)
             bounds = np.sort(np.unique(np.concatenate(([0, duracion_total], bounds))))
         except:
