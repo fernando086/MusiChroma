@@ -61,4 +61,9 @@ ngrok http 5000
 ### 4. Frontend Setup (Android)
 1. Open the project folder `intentoAppDatosMusica` in Android Studio.
 2. Update the base URL in your Retrofit client or network configuration to point to the newly generated **ngrok URL**.
-3. Sync Gradle and run the app on an Android Emulator (API 28+) or a physical device.
+3. **Firebase Configuration**:
+   - Create your own project in Firebase Console.
+   - Add an Android app with the package name `com.example.intentoappdatosmusica`.
+   - Download the generated `google-services.json` file.
+   - Place this file inside the `app/` directory (e.g., `intentoAppDatosMusica/app/google-services.json`). A template is provided in the repository. Do not commit your real file.
+4. Sync Gradle and run the app on an Android Emulator (API 28+) or a physical device.

@@ -1,41 +1,41 @@
 {
   "project_info": {
-    "project_number": "1093017798002",
-    "project_id": "tesis-musica-20242",
-    "storage_bucket": "tesis-musica-20242.appspot.com"
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "YOUR_PROJECT_ID",
+    "storage_bucket": "YOUR_PROJECT_ID.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1093017798002:android:6c2136c1769d33c0f949eb",
+        "mobilesdk_app_id": "YOUR_MOBILE_SDK_APP_ID",
         "android_client_info": {
           "package_name": "com.example.intentoappdatosmusica"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1093017798002-uuavk8drqaltfeu1socqhsla5k19irbl.apps.googleusercontent.com",
+          "client_id": "YOUR_OAUTH_CLIENT_ID",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.intentoappdatosmusica",
-            "certificate_hash": "f933ad2661f7a1e380fd5f00d3501c678116e3ce"
+            "certificate_hash": "YOUR_CERTIFICATE_HASH"
           }
         },
         {
-          "client_id": "1093017798002-rdj9hkn5urn8vs267e50isafqh4k7gj4.apps.googleusercontent.com",
+          "client_id": "YOUR_WEB_CLIENT_ID",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAXGa2I0FEDoKCYBsvy9YELsecM0J0gxeQ"
+          "current_key": "YOUR_API_KEY"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "1093017798002-rdj9hkn5urn8vs267e50isafqh4k7gj4.apps.googleusercontent.com",
+              "client_id": "YOUR_WEB_CLIENT_ID",
               "client_type": 3
             }
           ]
