@@ -25,6 +25,9 @@ import joblib
 import keras
 
 import re
+from dotenv import load_dotenv
+
+load_dotenv()
 
 active_downloads = {}  # Diccionario para rastrear descargas en curso
 
@@ -78,11 +81,11 @@ def protected_route():
 
 def get_db_connection():
     conn = psycopg2.connect(
-        host="localhost",
-        database="intento_aplicacionmovil_android",
-        user="admin_fernando",
-        password="191VP90957QX2685",
-        port="5433"
+        host=os.getenv("DB_HOST", "localhost"),
+        database=os.getenv("DB_NAME", "intento_aplicacionmovil_android"),
+        user=os.getenv("DB_USER", "admin_fernando"),
+        password=os.getenv("DB_PASSWORD", "191VP90957QX2685"),
+        port=os.getenv("DB_PORT", "5433")
     )
     return conn
 
@@ -101,10 +104,10 @@ def agregar_usuario_si_no_existe(nombre, uid):
     try:
         # Conexión a PostgreSQL
         conn = psycopg2.connect(
-            host="localhost",
-            database="intento_aplicacionmovil_android",  # Cambia el nombre de tu base de datos
-            user="admin_fernando",  # Cambia por tu usuario de PostgreSQL
-            password="191VP90957QX2685"  # Cambia por tu contraseña de PostgreSQL
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "intento_aplicacionmovil_android"),  # Cambia el nombre de tu base de datos
+            user=os.getenv("DB_USER", "admin_fernando"),  # Cambia por tu usuario de PostgreSQL
+            password=os.getenv("DB_PASSWORD", "191VP90957QX2685")  # Cambia por tu contraseña de PostgreSQL
         )
         cursor = conn.cursor()
 
@@ -142,10 +145,10 @@ def get_user():
 
         # Conectar a PostgreSQL
         conn = psycopg2.connect(
-            host="localhost",
-            database="intento_aplicacionmovil_android",  # Cambia el nombre de tu base de datos
-            user="admin_fernando",  # Cambia por tu usuario de PostgreSQL
-            password="191VP90957QX2685"  # Cambia por tu contraseña de PostgreSQL
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "intento_aplicacionmovil_android"),  # Cambia el nombre de tu base de datos
+            user=os.getenv("DB_USER", "admin_fernando"),  # Cambia por tu usuario de PostgreSQL
+            password=os.getenv("DB_PASSWORD", "191VP90957QX2685")  # Cambia por tu contraseña de PostgreSQL
         )
         cursor = conn.cursor()
 
@@ -189,11 +192,11 @@ def verificar_o_guardar_usuario():
     try:
         print("estableciendo conexión con BD PostgreSQL")
         conn = psycopg2.connect(
-            host="localhost",
-            database="intento_aplicacionmovil_android",
-            user="admin_fernando",
-            password="191VP90957QX2685",
-            port="5433"
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "intento_aplicacionmovil_android"),
+            user=os.getenv("DB_USER", "admin_fernando"),
+            password=os.getenv("DB_PASSWORD", "191VP90957QX2685"),
+            port=os.getenv("DB_PORT", "5433")
         )
         print("el usuario que se conectará a la base de datos ha sido identificado")
         cursor = conn.cursor()
@@ -243,11 +246,11 @@ def obtener_datos_usuario():
 
     try:
         conn = psycopg2.connect(
-            host="localhost",
-            database="intento_aplicacionmovil_android",
-            user="admin_fernando",
-            password="191VP90957QX2685",
-            port="5433"
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "intento_aplicacionmovil_android"),
+            user=os.getenv("DB_USER", "admin_fernando"),
+            password=os.getenv("DB_PASSWORD", "191VP90957QX2685"),
+            port=os.getenv("DB_PORT", "5433")
         )
         cursor = conn.cursor()
 
