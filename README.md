@@ -1,69 +1,46 @@
-# MusiChroma
+# MusiChroma 🎵
 
-**Status:** Usable Prototype / Work in Progress
+### *Monitoreo emocional inteligente y soporte en sesiones de musicoterapia mediante Deep Learning*
 
-## Overview
-MusiChroma is an innovative application designed for music therapy and educational interventions. It enables facilitators to manage psychological and developmental sessions, seamlessly process audio directly from YouTube, and analyze the emotional impact of music using advanced machine learning algorithms (Valence and Arousal models).
+---
 
-## Tech Stack
+## 📝 Descripción del Proyecto
+**MusiChroma** es una aplicación móvil avanzada diseñada para enriquecer y estructurar las sesiones de musicoterapia y educación emocional. Utilizando un modelo de aprendizaje profundo basado en una arquitectura **CNN1D-BiGRU-Attention**, el sistema realiza análisis continuos del contenido de audio para estimar el impacto emocional de las pistas en tiempo real. 
 
-### 📱 Frontend (Mobile App - Android Studio)
-* **Language & UI:** Java, XML, Jetpack Compose (enabled), Material Design, ConstraintLayout, ViewPager2, Car UI Library.
-* **Authentication:** Firebase Auth, Google Play Services Auth.
-* **Network & Data:** Retrofit (with Gson converter) for API requests, PostgreSQL JDBC Driver for direct DB operations.
-* **Media & ML:** Picasso (image loading), TensorFlow Lite (on-device inference).
+Esta solución tecnológica sirve como un soporte objetivo para el musicoterapeuta, traduciendo variables acústicas complejas en interpretaciones emocionales claras basadas en modelos validados de psicología.
 
-### 🐍 Backend (Python / Flask - `app_musica.py`)
-* **Framework:** Flask (with Flask-Compress for optimized responses).
-* **Database & Auth:** `psycopg2` (PostgreSQL connection), `firebase_admin` (token verification).
-* **Audio Processing:** `yt-dlp` & FFmpeg (for downloading and extracting YouTube audio), `pydub`.
-* **Machine Learning Inference:** TensorFlow, Keras, Librosa, NumPy, Joblib.
+---
 
-### 🧠 Machine Learning & Data Science (`pipeline_russell.ipynb`)
-* **Core Libraries:** TensorFlow 2.10.0 (CNN + GRU architectures), Keras, NumPy, Pandas.
-* **Audio Feature Extraction:** Librosa (extracting 102 features including Mel spectrograms, MFCC, Chroma CQT, and Spectral data).
-* **Data Pipeline:** TFRecords (for efficient, compressed storage of audio windows and continuous valence/arousal labels).
+## ⚙️ Arquitectura del Sistema
+El ecosistema de **MusiChroma** está compuesto por las siguientes tecnologías integradas:
 
+* **📱 Cliente Android:** Desarrollado en Java y XML nativo con Material Design, garantizando una interfaz premium, fluida e intuitiva para el terapeuta.
+* **🐍 Servidor Flask:** Backend de alto rendimiento que expone las APIs REST necesarias para el procesamiento acústico y la orquestación del modelo.
+* **🗄️ Base de Datos:** PostgreSQL para un almacenamiento persistente robusto, seguro y estructurado de sesiones, pacientes e históricos de canciones.
+* **🔒 Autenticación:** Integración con Google Firebase Auth para el inicio de sesión seguro de los terapeutas.
 
-This project was developed relying heavily on a **Vibe Coding** methodology, utilizing powerful Large Language Models (LLMs), specifically cutting-edge AI coding agents, especially Gemini (in Antigravity IDE), ChatGPT and Deepseek, to accelerate both architectural design and complex logic implementation. This AI-augmented workflow was instrumental in establishing the full-stack infrastructure, rapidly prototyping neural network integrations for audio analysis, and ensuring an agile, highly iterative development process from conception to a usable prototype.
+---
 
-## 🚀 Getting Started
-If you want to run this prototype locally, follow these steps to set up the backend, tunneling, and the Android client.
+## 🎶 Enfoque BYOM (Bring Your Own Music)
+Para garantizar la **máxima confiabilidad, independencia y cumplimiento normativo**, MusiChroma adopta el enfoque **BYOM (Bring Your Own Music)**:
+* **Procesamiento Local Estricto:** Se procesan únicamente archivos de audio almacenados localmente en el dispositivo del usuario o del terapeuta.
+* **Formatos Compatibles:** Soporte completo para pistas de audio en formatos `.mp3`, `.wav` y `.ogg`.
+* **Capacidad Máxima:** Límite flexible de hasta **100 MB** por pista de audio, óptimo para la carga rápida y el procesamiento en el servidor sin latencia.
+* **Sin Dependencias de Terceros:** Al prescindir de servicios externos de descarga o streaming, el sistema asegura un funcionamiento autónomo y continuo, inmune a cambios de políticas de APIs externas o caídas de red de plataformas terceras.
 
-### 1. Prerequisites
-- **Python 3.x**
-- **Android Studio**
-- **PostgreSQL**
-- **FFmpeg** (added to your system's PATH)
-- **ngrok** (for tunneling the local backend to the internet)
+---
 
-### 2. Backend Setup
-1. Clone this repository to your local machine.
-2. Navigate to the `flask-backend` directory and install the required dependencies (e.g., `pip install -r requirements.txt` or install manually).
-3. Create a PostgreSQL database named `intento_aplicacionmovil_android` and configure the user/password to match the `app_musica.py` connection string.
-4. Import the provided schema and seed data into your database:
-   ```bash
-   psql -U admin_fernando -d intento_aplicacionmovil_android -f flask-backend/schema.sql
-   ```
-5. Place your Firebase Admin SDK JSON credentials file in the root directory and update the path in the Flask app.
-6. Run the server:
-   ```bash
-   python app_musica.py
-   ```
+## 🌟 Características Principales
 
-### 3. Exposing the API (ngrok)
-To allow the Android emulator or physical device to communicate with your local Flask server over the internet, run ngrok on the port your Flask app uses (typically 5000):
-```bash
-ngrok http 5000
-```
-*Note the generated forwarding URL (e.g., `https://<random-id>.ngrok.app`).*
+| Característica | Detalle Técnico / Funcional |
+| :--- | :--- |
+| 🧠 **Inferencia Emocional Continua** | Estimación en tiempo real de dimensiones afectivas (**Valence** y **Arousal**) mediante el modelo de aprendizaje profundo. |
+| 📊 **Mapeo al Modelo de Plutchik** | Clasificación en **8 emociones básicas** y **3 niveles de intensidad** representados en un gráfico interactivo. |
+| 🔊 **Reproducción Concurrente Estable** | Reproductor de audio local integrado diseñado con sincronización precisa del gráfico emocional durante la reproducción. |
+| 📄 **Informes Clínicos Automatizados** | Exportación automatizada de históricos y notas de sesión a formatos descargables **PDF** y **Word** (`.docx`). |
 
-### 4. Frontend Setup (Android)
-1. Open the project folder `intentoAppDatosMusica` in Android Studio.
-2. Update the base URL in your Retrofit client or network configuration to point to the newly generated **ngrok URL**.
-3. **Firebase Configuration**:
-   - Create your own project in Firebase Console.
-   - Add an Android app with the package name `com.example.intentoappdatosmusica`.
-   - Download the generated `google-services.json` file.
-   - Place this file inside the `app/` directory (e.g., `intentoAppDatosMusica/app/google-services.json`). A template is provided in the repository. Do not commit your real file.
-4. Sync Gradle and run the app on an Android Emulator (API 28+) or a physical device.
+---
+
+## 🚀 Metodología de Desarrollo
+
+Este proyecto fue desarrollado bajo una metodología **AI-Augmented Software Engineering** (Ingeniería de Software Aumentada por IA), utilizando herramientas avanzadas de asistencia al desarrollo, entre ellas **Gemini** (a través de Antigravity IDE), **ChatGPT** y **DeepSeek**. Esto permitió la rápida implementación de la arquitectura de Deep Learning en el backend, la estructuración robusta de la base de datos y la creación de interfaces de usuario pulidas de acuerdo a los estándares de calidad del software.
