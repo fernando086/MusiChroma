@@ -24,8 +24,7 @@ import retrofit2.Response;
 
 public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private static final int VIEW_TYPE_SESION = 0;
-    private static final int VIEW_TYPE_ADD_SESION = 1;
+
 
     private Context context;
     private List<Sesion> sesionList;
@@ -33,35 +32,46 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
     private ApiService apiService;
 
-    // ✅ Listener para el botón de agregar sesión
-    private View.OnClickListener onAgregarClickListener;
+
 
     // ✅ Listeners asignables opcionalmente
-    private View.OnClickListener onIngresarClickListener;
-    private OnCambiarColorClickListener onCambiarColorClickListener;
+    public interface OnSesionAccionClickListener {
+        void onClick(View v, Sesion sesion);
+    }
+    
+    private OnSesionAccionClickListener onIngresarClickListener;
+    private OnSesionAccionClickListener onCambiarColorClickListener;
     private View.OnClickListener onFavoritoClickListener;
+    
+    public interface PaginationListener {
+        void onPageChanged(int currentPage, int totalPages);
+    }
+    private PaginationListener paginationListener;
+    
+    private List<Sesion> sesionListFiltered;
+    private int currentPage = 1;
+    private int itemsPerPage = 10;
+
+    public void setPaginationListener(PaginationListener listener) {
+        this.paginationListener = listener;
+    }
 
     public SesionAdapter(Context context, List<Sesion> sesionList) {
         this.context = context;
-        this.sesionList = new ArrayList<>(sesionList);
         this.sesionListFull = new ArrayList<>(sesionList);
+        this.sesionListFiltered = new ArrayList<>(sesionList);
+        this.sesionList = new ArrayList<>();
         this.apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+        updatePaginatedList();
     }
 
-    // ✅ Setters de listeners
-    public void setOnAgregarClickListener(View.OnClickListener listener) {
-        this.onAgregarClickListener = listener;
-    }
 
-    public void setOnIngresarClickListener(View.OnClickListener listener) {
+
+    public void setOnIngresarClickListener(OnSesionAccionClickListener listener) {
         this.onIngresarClickListener = listener;
     }
 
-    public interface OnCambiarColorClickListener {
-        void onClick(View v, int position);
-    }
-
-    public void setOnCambiarColorClickListener(OnCambiarColorClickListener listener) {
+    public void setOnCambiarColorClickListener(OnSesionAccionClickListener listener) {
         this.onCambiarColorClickListener = listener;
     }
 
@@ -70,66 +80,51 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     }
 
     public void setSesionList(List<Sesion> nuevaLista) {
-        this.sesionList = new ArrayList<>(nuevaLista);
         this.sesionListFull = new ArrayList<>(nuevaLista);
-        notifyDataSetChanged();
-    }
-
-    @Override
-    public int getItemViewType(int position) {
-        return position == 0 ? VIEW_TYPE_ADD_SESION : VIEW_TYPE_SESION;
+        this.sesionListFiltered = new ArrayList<>(nuevaLista);
+        this.currentPage = 1;
+        updatePaginatedList();
     }
 
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(
-                viewType == VIEW_TYPE_ADD_SESION ? R.layout.item_add_to_list : R.layout.item_sesion,
-                parent,
-                false);
-        return viewType == VIEW_TYPE_ADD_SESION ? new AddSesionViewHolder(view) : new SesionViewHolder(view);
+        View view = LayoutInflater.from(context).inflate(R.layout.item_sesion, parent, false);
+        return new SesionViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        if (getItemViewType(position) == VIEW_TYPE_ADD_SESION) {
-            // ✅ Configurar botón "+"
-            AddSesionViewHolder addHolder = (AddSesionViewHolder) holder;
-            if (onAgregarClickListener != null) {
-                addHolder.btnAgregar.setOnClickListener(v -> onAgregarClickListener.onClick(v));
-            }
-        } else {
-            SesionViewHolder sesionHolder = (SesionViewHolder) holder;
-            Sesion sesion = sesionList.get(position - 1); // 👈 IMPORTANTE: correr índice
+        SesionViewHolder sesionHolder = (SesionViewHolder) holder;
+        Sesion sesion = sesionList.get(position);
 
-            sesionHolder.txtTitulo.setText(sesion.getNumeroSesion() + " - " + sesion.getNombre());
-            sesionHolder.txtFechas.setText(sesion.getFechaHoraInicio() + " → " + sesion.getFechaHoraFinal());
-            // Activar marquee luego de un pequeño delay
-            sesionHolder.txtFechas.postDelayed(() -> {
-                sesionHolder.txtFechas.setSelected(true); // Necesario para activar marquee
-            }, 2000); // Espera 2 segundos antes de empezar a desplazarse
+        sesionHolder.txtTitulo.setText(sesion.getNumeroSesion() + " - " + sesion.getNombre());
+        sesionHolder.txtFechas.setText(sesion.getFechaHoraInicio() + " → " + sesion.getFechaHoraFinal());
+        // Activar marquee luego de un pequeño delay
+        sesionHolder.txtFechas.postDelayed(() -> {
+            sesionHolder.txtFechas.setSelected(true); // Necesario para activar marquee
+        }, 2000); // Espera 2 segundos antes de empezar a desplazarse
 
-            sesionHolder.txtEstrellas.setText(String.valueOf(sesion.getEstrellas()));
-            sesionHolder.txtCanciones.setText(String.valueOf(sesion.getCantidadCanciones()));
+        sesionHolder.txtEstrellas.setText(String.valueOf(sesion.getEstrellas()));
+        sesionHolder.txtCanciones.setText(String.valueOf(sesion.getCantidadCanciones()));
 
-            if (onIngresarClickListener != null) {
-                sesionHolder.btnIngresar.setTag(position); // 👈 Guarda la posición
-                sesionHolder.btnIngresar.setOnClickListener(v -> onIngresarClickListener.onClick(v));
-            }
+        if (onIngresarClickListener != null) {
+            sesionHolder.btnIngresar.setOnClickListener(v -> onIngresarClickListener.onClick(v, sesion));
+        }
 
-            if (onCambiarColorClickListener != null)
-                sesionHolder.btnCambiarColor.setOnClickListener(v -> onCambiarColorClickListener.onClick(v, position));
+        if (onCambiarColorClickListener != null)
+            sesionHolder.btnCambiarColor.setOnClickListener(v -> onCambiarColorClickListener.onClick(v, sesion));
 
-            sesionHolder.btnEliminar.setOnClickListener(v -> {
-                new AlertDialog.Builder(context)
-                        .setTitle("Eliminar sesión")
-                        .setMessage("¿Estás seguro de que deseas eliminar la sesión '" + sesion.getNombre() + "'?")
-                        .setPositiveButton("Eliminar", (dialog, which) -> {
-                            deleteSesion(sesion, position - 1);
-                        })
-                        .setNegativeButton("Cancelar", null)
-                        .show();
-            });
+        sesionHolder.btnEliminar.setOnClickListener(v -> {
+            new AlertDialog.Builder(context)
+                    .setTitle("Eliminar sesión")
+                    .setMessage("¿Estás seguro de que deseas eliminar la sesión '" + sesion.getNombre() + "'?")
+                    .setPositiveButton("Eliminar", (dialog, which) -> {
+                        deleteSesion(sesion, position);
+                    })
+                    .setNegativeButton("Cancelar", null)
+                    .show();
+        });
 
             if (onFavoritoClickListener != null)
                 sesionHolder.btnFavorito.setOnClickListener(v -> onFavoritoClickListener.onClick(v));
@@ -142,7 +137,6 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 card.setStrokeColor(Color.parseColor(hex));
             } else {
                 card.setStrokeColor(Color.parseColor("#000000")); // Color negro por defecto
-            }
         }
     }
 
@@ -151,12 +145,12 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
                 if (response.isSuccessful()) {
-                    sesionList.remove(position);
-                    notifyItemRemoved(position + 1);
-                    notifyItemRangeChanged(position + 1, sesionList.size());
-                    Toast.makeText(context, "Sesión '" + sesion.getId() + "' eliminada", Toast.LENGTH_SHORT).show();
+                    sesionListFull.removeIf(s -> s.getId() == sesion.getId());
+                    sesionListFiltered.removeIf(s -> s.getId() == sesion.getId());
+                    updatePaginatedList();
+                    Toast.makeText(context, "Sesión eliminada correctamente", Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(context, "Error al eliminar la sesión " + sesion.getId(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "Error al eliminar la sesión", Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -169,7 +163,7 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
     @Override
     public int getItemCount() {
-        return sesionList != null ? sesionList.size() + 1 : 1; // +1 por el botón de agregar
+        return sesionList != null ? sesionList.size() : 0;
     }
 
     // ✅ ViewHolder de sesión normal
@@ -191,21 +185,12 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         }
     }
 
-    // ✅ ViewHolder del botón de agregar
-    public static class AddSesionViewHolder extends RecyclerView.ViewHolder {
-        ImageButton btnAgregar;
 
-        public AddSesionViewHolder(@NonNull View itemView) {
-            super(itemView);
-            btnAgregar = itemView.findViewById(R.id.btn_add_item); // 👈 este debe ser el ID del botón en
-                                                                   // item_add_to_list.xml
-        }
-    }
 
     public void filter(String query, List<Song> allSongs) {
-        sesionList.clear();
+        sesionListFiltered.clear();
         if (query.isEmpty()) {
-            sesionList.addAll(sesionListFull);
+            sesionListFiltered.addAll(sesionListFull);
         } else {
             String filterPattern = query.toLowerCase().trim();
             for (Sesion sesion : sesionListFull) {
@@ -216,7 +201,7 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                         ||
                         (sesion.getObservaciones() != null
                                 && sesion.getObservaciones().toLowerCase().contains(filterPattern))) {
-                    sesionList.add(sesion);
+                    sesionListFiltered.add(sesion);
                     continue; // Already added
                 }
 
@@ -225,7 +210,7 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                     for (Integer songId : sesion.getCancionesIds()) {
                         for (Song song : allSongs) {
                             if (song.getId() == songId && song.getNombre().toLowerCase().contains(filterPattern)) {
-                                sesionList.add(sesion);
+                                sesionListFiltered.add(sesion);
                                 break; // Song found, add session and move to next session
                             }
                         }
@@ -233,6 +218,59 @@ public class SesionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 }
             }
         }
+        currentPage = 1;
+        updatePaginatedList();
+    }
+
+    public void updatePaginatedList() {
+        sesionList.clear();
+        int totalItems = sesionListFiltered.size();
+        
+        int start = (currentPage - 1) * itemsPerPage;
+        int end = Math.min(start + itemsPerPage, totalItems);
+        
+        if (start < totalItems) {
+            sesionList.addAll(sesionListFiltered.subList(start, end));
+        }
         notifyDataSetChanged();
+        
+        if (paginationListener != null) {
+            paginationListener.onPageChanged(currentPage, getTotalPages());
+        }
+    }
+
+    public int getTotalPages() {
+        int totalDatos = sesionListFiltered.size();
+        if (totalDatos == 0) return 1;
+        return (int) Math.ceil((double) totalDatos / itemsPerPage);
+    }
+
+    public void nextPage() {
+        if (currentPage < getTotalPages()) {
+            currentPage++;
+            updatePaginatedList();
+        }
+    }
+
+    public void prevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            updatePaginatedList();
+        }
+    }
+    
+    public int getCurrentPage() {
+        return currentPage;
+    }
+
+    public void actualizarColorSesionGlobal(int sesionId, int nuevoColor) {
+        for (Sesion s : sesionListFull) if (s.getId() == sesionId) s.setColor(nuevoColor);
+        for (Sesion s : sesionListFiltered) if (s.getId() == sesionId) s.setColor(nuevoColor);
+        for (int i=0; i<sesionList.size(); i++) {
+             if (sesionList.get(i).getId() == sesionId) {
+                 sesionList.get(i).setColor(nuevoColor);
+                 notifyItemChanged(i);
+             }
+        }
     }
 }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_popup"
@@ -9,16 +10,34 @@
     <!-- Título dinámico -->
 
     <!-- Cuadrícula dentro del scroll -->
-    <TextView
-        android:id="@+id/tvTituloColor"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingBottom="12dp"
-        android:text="Selecciona un color para la sesión X"
-        android:textColor="?android:attr/textColorPrimary"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/tvTituloColor"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Selecciona un color para la sesión X"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/btn_info_leyenda"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@android:drawable/ic_dialog_info"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Ver leyenda de colores"
+            app:tint="?attr/colorPrimary" />
+    </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
@@ -42,7 +61,6 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Botones fuera del ScrollView -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -56,7 +74,18 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Cancelar"
+            android:layout_marginEnd="4dp"
             android:backgroundTint="#FF0000"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/btn_autoseleccion_color"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="AUTO"
+            android:layout_marginEnd="4dp"
+            android:backgroundTint="?attr/colorPrimaryDark"
             android:textColor="@color/white" />
 
         <Button

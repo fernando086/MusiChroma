@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Leyenda Emocional de Sesiones"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:gravity="center"
+            android:layout_marginBottom="12dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Los primeros 24 colores representan las 8 emociones básicas en 3 intensidades según la 'Rueda de las Emociones' de R. Plutchik. Su relación paralela con la música se basa en la 'Hipótesis de Mediación Emocional' (Palmer et al., 2013)."
+            android:textSize="14sp"
+            android:textStyle="italic"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- PLUTCHIK 1: AMARILLO -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#fed401"
+                android:layout_marginEnd="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Amarillo: Serenidad, Alegría, Éxtasis."
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- PLUTCHIK 2: VERDE CLARO -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#28a000"
+                android:layout_marginEnd="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Verde Claro: Aceptación, Confianza, Admiración."
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- PLUTCHIK 3: VERDE AZULADO -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#12936c"
+                android:layout_marginEnd="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Verde Oscuro/Azulado: Aprehensión, Miedo, Terror."
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- PLUTCHIK 4: AZUL CLARO -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#2b7ffe"
+                android:layout_marginEnd="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Azul Claro: Distracción, Sorpresa, Asombro."
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- PLUTCHIK 5: MORADO/AZUL -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#7c06ea"
+                android:layout_marginEnd="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Morado Oscuro: Melancolía, Tristeza, Pena."
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- PLUTCHIK 6: MAGENTA/VIOLETA -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#b00ce6"
+                android:layout_marginEnd="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Magenta/Rosa: Aburrimiento, Desagrado, Aversión."
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- PLUTCHIK 7: ROJO -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#d40001"
+                android:layout_marginEnd="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rojo: Enfado, Ira, Furia (Catarsis)."
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- PLUTCHIK 8: NARANJA -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#ff7900"
+                android:layout_marginEnd="12dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Naranja: Interés, Anticipación, Vigilancia."
+                android:textSize="14sp"/>
+        </LinearLayout>
+        
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/dividerVertical"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- COLORES EXTRA -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+            <View
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="#aaaaaa"
+                android:layout_marginEnd="12dp" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Colores Extra / Neutros"
+                    android:textStyle="bold"
+                    android:textSize="14sp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="La paleta final de matices, grises y blancos está reservada para uso mixto, ruido blanco, estados neutros o sesiones diagnósticas."
+                    android:textSize="13sp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_entendido_leyenda"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Entendido"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="?attr/colorPrimary"/>
+
+    </LinearLayout>
+</ScrollView>

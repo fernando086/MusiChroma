@@ -1,6 +1,9 @@
 package com.example.intentoappdatosmusica;
 
 import android.annotation.SuppressLint;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -15,6 +18,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.RatingBar;
 import android.widget.Switch;
 import android.widget.Spinner;
@@ -62,6 +66,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class DatosSesionesActivity extends AppCompatActivity {
+    private List<Sesion> grupoSesiones;
 
     private EditText etNombreSesion, etObservaciones, etDificultades, etRecomendaciones; // etObjetivoSesion eliminado
     private EditText etNombreIE, etNombreFacilitador;
@@ -144,6 +149,20 @@ public class DatosSesionesActivity extends AppCompatActivity {
         }
     }
 
+    private ActivityResultLauncher<Intent> cameraLauncher;
+
+    private Song cancionParaVincular;
+    private final ActivityResultLauncher<Intent> linkAudioLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    android.net.Uri selectedAudioUri = result.getData().getData();
+                    if (selectedAudioUri != null && cancionParaVincular != null) {
+                        vincularAudioLocal(selectedAudioUri, cancionParaVincular);
+                    }
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -200,27 +219,7 @@ public class DatosSesionesActivity extends AppCompatActivity {
         }
 
         // ✅ 4. Botón de regreso
-        btnBack.setOnClickListener(v -> {
-            if (!hayCambios()) {
-                finish(); // Nada que guardar
-                return;
-            }
-
-            new AlertDialog.Builder(this)
-                    .setTitle("¿Deseas guardar los cambios?")
-                    .setMessage("Has modificado datos en la sesión.")
-                    .setPositiveButton("Guardar", (dialog, which) -> {
-                        if (sesionActual.getId() == 0) {
-                            if (validarCampos())
-                                guardarSesionEnServidor();
-                        } else {
-                            actualizarSesionEnServidor();
-                        }
-                    })
-                    .setNegativeButton("Salir sin guardar", (dialog, which) -> finish())
-                    .setNeutralButton("Seguir editando", null)
-                    .show();
-        });
+        btnBack.setOnClickListener(v -> navegarHacia(() -> finish()));
 
         btnInfo.setOnClickListener(v -> Toast.makeText(this, "Información de la sesión", Toast.LENGTH_SHORT).show());
 
@@ -228,6 +227,15 @@ public class DatosSesionesActivity extends AppCompatActivity {
 
         // Configurar menú de pestañas
         configurarMenuPestanas();
+
+        // Configurar navegación entre sesiones del grupo
+        grupoSesiones = (List<Sesion>) getIntent().getSerializableExtra("grupo_sesiones");
+        LinearLayout navBarGrupo = findViewById(R.id.navBarGrupo);
+        ImageButton btnAnteriorSesion = findViewById(R.id.btnAnteriorSesion);
+        ImageButton btnSiguienteSesion = findViewById(R.id.btnSiguienteSesion);
+        TextView tvNavGrupoInfo = findViewById(R.id.tvNavGrupoInfo);
+
+        configurarNavegacionGrupo(grupoSesiones, navBarGrupo, btnAnteriorSesion, btnSiguienteSesion, tvNavGrupoInfo);
 
         // Inicializar listas de opciones para las grids
         inicializarOpcionesGrids();
@@ -242,21 +250,58 @@ public class DatosSesionesActivity extends AppCompatActivity {
     private List<OpcionSesion> opcionesClimaGrupal;
 
     private void inicializarOpcionesGrids() {
-        opcionesObjetivos = crearOpcionesPorDefecto("Objetivo", 9);
-        opcionesTecnicas = crearOpcionesPorDefecto("Técnica", 9);
-        opcionesMateriales = crearOpcionesPorDefecto("Material", 9);
-        opcionesLogros = crearOpcionesPorDefecto("Logro", 9);
-        opcionesClimaGrupal = crearOpcionesPorDefecto("Clima", 6); // 6 items (3x2)
+        opcionesObjetivos = crearListaOpciones(java.util.Arrays.asList(
+                "Cohesión grupal – trabajo colaborativo",
+                "Regulación emocional colectiva",
+                "Mejora de la convivencia y respeto",
+                "Estimulación de la atención grupal",
+                "Expresión emocional y creativa",
+                "Comunicación verbal y no verbal",
+                "Desarrollo rítmico y coordinación motora",
+                "Disminución de ansiedad o tensión en el aula"
+        ), true);
+
+        opcionesTecnicas = crearListaOpciones(java.util.Arrays.asList(
+                "Canto grupal de canciones dirigidas",
+                "Improvisación musical grupal (instrumental o vocal)",
+                "Percusión corporal",
+                "Movimiento creativo con música",
+                "Audición receptiva",
+                "Creación colectiva de canciones / letras",
+                "Actividades rítmicas en círculo",
+                "Dinámicas de coordinación y seguimiento"
+        ), true);
+
+        opcionesMateriales = crearListaOpciones(java.util.Arrays.asList(
+                "Instrumentos de percusión menor",
+                "Cajones / tambores",
+                "Parlantes / música grabada",
+                "Carteles con letras",
+                "Objetos sonoros",
+                "Aros / telas / cintas rítmicas"
+        ), true);
+
+        opcionesLogros = crearListaOpciones(java.util.Arrays.asList(
+                "Mejoró el clima emocional del aula", "Hubo mayor cohesión y cooperación",
+                "Aumentó el nivel de energía positiva", "Se redujo la tensión o conflicto",
+                "Incrementó la atención y seguimiento de instrucciones",
+                "Expresaron emociones a través de la música"
+        ), true);
+
+        opcionesClimaGrupal = crearListaOpciones(java.util.Arrays.asList(
+                "Armónico", "Disperso", "Agitado", "Colaborativo", "Con conflictos"
+        ), true);
     }
 
-    private List<OpcionSesion> crearOpcionesPorDefecto(String prefijo, int totalItems) {
+    private List<OpcionSesion> crearListaOpciones(List<String> nombres, boolean includeOtro) {
         List<OpcionSesion> lista = new ArrayList<>();
-        // items genéricos hasta totalItems - 1
-        for (int i = 1; i < totalItems; i++) {
-            lista.add(new OpcionSesion(i, prefijo + " " + i, android.R.drawable.ic_menu_help, false));
+        int i = 1;
+        for (String nombre : nombres) {
+            lista.add(new OpcionSesion(i++, nombre, android.R.drawable.ic_menu_help, false));
         }
-        // Opción final: Otro (editable) con ID = totalItems
-        lista.add(new OpcionSesion(totalItems, "Otro", android.R.drawable.ic_menu_edit, true));
+        if (includeOtro) {
+            lista.add(new OpcionSesion(i, "Otro", android.R.drawable.ic_menu_edit, true));
+        }
         return lista;
     }
 
@@ -265,7 +310,7 @@ public class DatosSesionesActivity extends AppCompatActivity {
     private LinearLayout menuPestanas;
     private Button[] tabButtons;
     private int currentTab = 0;
-    private static final int NUM_TABS = 8;
+    private static final int NUM_TABS = 9;
 
     private void configurarMenuPestanas() {
         viewPager = findViewById(R.id.viewPager);
@@ -281,7 +326,8 @@ public class DatosSesionesActivity extends AppCompatActivity {
                 findViewById(R.id.tabDesarrollo),
                 findViewById(R.id.tabObservaciones),
                 findViewById(R.id.tabLogros),
-                findViewById(R.id.tabExtras)
+                findViewById(R.id.tabExtras),
+                findViewById(R.id.tabExportar)
         };
 
         // Configurar ViewPager2 con adapter
@@ -414,10 +460,10 @@ public class DatosSesionesActivity extends AppCompatActivity {
             String linea;
             reader.readLine(); // Omitir el encabezado
             while ((linea = reader.readLine()) != null) {
-                String[] partes = linea.trim().split(",");
-                if (partes.length >= 2) {
+                String[] partes = linea.trim().replace("\"", "").split(",");
+                if (partes.length >= 3) {
                     String term = partes[0].trim().toLowerCase();
-                    String emotion = partes[1].trim().toLowerCase();
+                    String emotion = partes[2].trim().toLowerCase();
 
                     palabraAEmociones.putIfAbsent(term, new HashSet<>());
                     palabraAEmociones.get(term).add(emotion);
@@ -449,11 +495,11 @@ public class DatosSesionesActivity extends AppCompatActivity {
             String linea;
             reader.readLine(); // Omitir encabezado
             while ((linea = reader.readLine()) != null) {
-                String[] partes = linea.trim().split(",");
-                if (partes.length >= 6) {
+                String[] partes = linea.trim().replace("\"", "").split(",");
+                if (partes.length >= 7) {
                     String term = partes[0].trim();
-                    String emotionArchivo = partes[1].trim();
-                    String nivel = partes[5].trim();
+                    String emotionArchivo = partes[2].trim();
+                    String nivel = partes[6].trim();
 
                     // Solo agregar si la palabra no está en la lista de repetidas
                     if (!palabrasRepetidas.contains(term.toLowerCase()) && emotionArchivo.equalsIgnoreCase(emocion)
@@ -651,8 +697,8 @@ public class DatosSesionesActivity extends AppCompatActivity {
             return true; // No se puede validar si una no está seteada
         }
         try {
-            Date inicio = bdFormat.parse(limpiarGMT(fechaInicio));
-            Date fin = bdFormat.parse(limpiarGMT(fechaFinal));
+            Date inicio = bdFormat.parse(limpiarGMTHelper(fechaInicio));
+            Date fin = bdFormat.parse(limpiarGMTHelper(fechaFinal));
 
             if (inicio != null && fin != null) {
                 if (esInicio) {
@@ -669,11 +715,95 @@ public class DatosSesionesActivity extends AppCompatActivity {
         return true; // Si hay error, no bloquear al usuario
     }
 
-    private String limpiarGMT(String fecha) {
+    private void limpiarGMT(String fecha) {
+        return; // No se usa internamente o se reemplaza
+    }
+
+    private String limpiarGMTHelper(String fecha) {
         return fecha.replace(" GMT", ""); // Quita el " GMT" para parsear
     }
 
-    private void guardarSesionEnServidor() {
+    private void navegarHacia(Runnable accionNavegacion) {
+        if (!hayCambios()) {
+            accionNavegacion.run();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("¿Deseas guardar los cambios?")
+                .setMessage("Has modificado datos en la sesión.")
+                .setPositiveButton("Guardar", (dialog, which) -> {
+                    if (sesionActual.getId() == 0) {
+                        if (validarCampos())
+                            guardarSesionEnServidor(accionNavegacion);
+                    } else {
+                        actualizarSesionEnServidor(accionNavegacion);
+                    }
+                })
+                .setNegativeButton("Salir sin guardar", (dialog, which) -> accionNavegacion.run())
+                .setNeutralButton("Seguir editando", null)
+                .show();
+    }
+
+    private void configurarNavegacionGrupo(List<Sesion> grupoSesiones, LinearLayout navBar, ImageButton btnAnterior,
+            ImageButton btnSiguiente, TextView tvInfo) {
+        if (grupoSesiones == null || grupoSesiones.size() <= 1) {
+            navBar.setVisibility(View.GONE);
+            return;
+        }
+
+        navBar.setVisibility(View.VISIBLE);
+        int currentIndex = -1;
+        for (int i = 0; i < grupoSesiones.size(); i++) {
+            if (grupoSesiones.get(i).getId() == sesionActual.getId()) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex == -1) {
+            // Posible si es una sesión nueva no guardada
+            tvInfo.setText("Nueva sesión del grupo");
+            btnAnterior.setVisibility(View.INVISIBLE);
+            btnSiguiente.setVisibility(View.INVISIBLE);
+            return;
+        }
+
+        // Las sesiones vienen ordenadas cronológicamente inverso (la más nueva es el
+        // índice 0)
+        // Por lo tanto, la "Anterior" (más antigua) está en currentIndex + 1
+        // Y la "Siguiente" (más nueva) está en currentIndex - 1
+        tvInfo.setText("Sesión " + (grupoSesiones.size() - currentIndex) + " de " + grupoSesiones.size());
+
+        final int indexAnt = currentIndex + 1;
+        if (indexAnt < grupoSesiones.size()) {
+            btnAnterior.setVisibility(View.VISIBLE);
+            btnAnterior
+                    .setOnClickListener(v -> navegarHacia(() -> irASesion(grupoSesiones.get(indexAnt), grupoSesiones)));
+        } else {
+            btnAnterior.setVisibility(View.INVISIBLE);
+        }
+
+        final int indexSig = currentIndex - 1;
+        if (indexSig >= 0) {
+            btnSiguiente.setVisibility(View.VISIBLE);
+            btnSiguiente
+                    .setOnClickListener(v -> navegarHacia(() -> irASesion(grupoSesiones.get(indexSig), grupoSesiones)));
+        } else {
+            btnSiguiente.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    private void irASesion(Sesion nuevaSesion, List<Sesion> grupoSesiones) {
+        Intent intent = new Intent(this, DatosSesionesActivity.class);
+        intent.putExtra("sesion", (java.io.Serializable) nuevaSesion);
+        intent.putExtra("lista_canciones", (java.io.Serializable) canciones);
+        intent.putExtra("grupo_sesiones", (java.io.Serializable) grupoSesiones);
+        startActivity(intent);
+        finish();
+    }
+
+    private void guardarSesionEnServidor(Runnable onExito) {
         // --- INICIO DE VALIDACIÓN DE FECHAS ---
         String fechaInicioEnvio = btnFechaInicio.getText().toString();
         String fechaFinalEnvio = btnFechaFinal.getText().toString();
@@ -732,7 +862,7 @@ public class DatosSesionesActivity extends AppCompatActivity {
                 sesionActual.getObservaciones(), // observaciones (comentarios)
                 false, // favorito
                 ratingBar != null ? ratingBar.getRating() : 0,
-                0, // color
+                sesionActual != null ? sesionActual.getColor() : 0, // color
                 sesionActual.getCancionesIds(),
                 sesionActual.getPalabras(),
                 etDificultades != null ? etDificultades.getText().toString()
@@ -754,7 +884,11 @@ public class DatosSesionesActivity extends AppCompatActivity {
                     Intent intent = new Intent();
                     intent.putExtra("sesion_actualizada", true);
                     setResult(RESULT_OK, intent);
-                    finish();
+                    if (onExito != null) {
+                        onExito.run();
+                    } else {
+                        finish();
+                    }
                 } else {
                     Toast.makeText(DatosSesionesActivity.this, "Error guardando sesión", Toast.LENGTH_SHORT).show();
                 }
@@ -767,7 +901,7 @@ public class DatosSesionesActivity extends AppCompatActivity {
         });
     }
 
-    private void actualizarSesionEnServidor() {
+    private void actualizarSesionEnServidor(Runnable onExito) {
         // --- INICIO DE VALIDACIÓN DE FECHAS (Copia exacta de la lógica de guardar) ---
         String fechaInicioEnvio = btnFechaInicio.getText().toString();
         String fechaFinalEnvio = btnFechaFinal.getText().toString();
@@ -817,7 +951,7 @@ public class DatosSesionesActivity extends AppCompatActivity {
                 sesionActual.getObservaciones(),
                 false, // favorito
                 ratingBar != null ? ratingBar.getRating() : sesionActual.getEstrellas(),
-                0, // color
+                sesionActual != null ? sesionActual.getColor() : 0, // color
                 sesionActual.getCancionesIds(),
                 sesionActual.getPalabras(),
                 etDificultades != null ? etDificultades.getText().toString()
@@ -839,7 +973,11 @@ public class DatosSesionesActivity extends AppCompatActivity {
                     Intent intent = new Intent();
                     intent.putExtra("sesion_actualizada", true);
                     setResult(RESULT_OK, intent);
-                    finish();
+                    if (onExito != null) {
+                        onExito.run();
+                    } else {
+                        finish();
+                    }
                 } else {
                     Toast.makeText(DatosSesionesActivity.this, "Error al actualizar", Toast.LENGTH_SHORT).show();
                 }
@@ -893,6 +1031,9 @@ public class DatosSesionesActivity extends AppCompatActivity {
                     break;
                 case 7: // Extras
                     view = inflater.inflate(R.layout.tab_extras_sesion, parent, false);
+                    break;
+                case 8: // Exportar
+                    view = inflater.inflate(R.layout.tab_exportar_sesion, parent, false);
                     break;
                 default:
                     view = inflater.inflate(R.layout.item_tab_sesion, parent, false);
@@ -1099,6 +1240,40 @@ public class DatosSesionesActivity extends AppCompatActivity {
                         });
                     }
                     break;
+
+                case 8: // Exportar
+                    android.widget.Switch switchFormato = rootView.findViewById(R.id.switchFormato);
+                    android.widget.RadioButton rbSoloSesion = rootView.findViewById(R.id.rbSoloSesion);
+                    android.widget.RadioButton rbTodoGrupo = rootView.findViewById(R.id.rbTodoGrupo);
+                    Button btnGenerarReporte = rootView.findViewById(R.id.btnGenerarReporte);
+
+                    // Si no pertenece a un grupo, deshabilitar la opción "Todo el grupo"
+                    if (grupoSesiones == null || grupoSesiones.size() <= 1) {
+                        rbTodoGrupo.setEnabled(false);
+                    }
+
+                    if (btnGenerarReporte != null) {
+                        btnGenerarReporte.setOnClickListener(v -> {
+                            boolean exportarGrupo = rbTodoGrupo.isChecked();
+                            String formato = switchFormato.isChecked() ? "pdf" : "docx";
+                            
+                            CheckBox chkPlantillaExtendida = rootView.findViewById(R.id.chkPlantillaExtendida);
+                            boolean plantillaExtendida = chkPlantillaExtendida != null && chkPlantillaExtendida.isChecked();
+
+                            List<Integer> sesionesIds = new ArrayList<>();
+                            if (exportarGrupo) {
+                                for (Sesion s : grupoSesiones) {
+                                    sesionesIds.add(s.getId());
+                                }
+                            } else {
+                                sesionesIds.add(sesionActual.getId());
+                            }
+
+                            // Call API
+                            exportarInforme(sesionesIds, formato, plantillaExtendida);
+                        });
+                    }
+                    break;
             }
         }
 
@@ -1132,7 +1307,7 @@ public class DatosSesionesActivity extends AppCompatActivity {
         // Configurar Spinner de Grado (1-6)
         ArrayAdapter<String> adapterGrado = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
-                new String[] { "1", "2", "3", "4", "5", "6" });
+                new String[] { "(Select)", "1", "2", "3", "4", "5", "6" });
         adapterGrado.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         if (spinnerGrado != null) {
             spinnerGrado.setAdapter(adapterGrado);
@@ -1141,7 +1316,7 @@ public class DatosSesionesActivity extends AppCompatActivity {
         // Configurar Spinner de Sección (A-D)
         ArrayAdapter<String> adapterSeccion = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
-                new String[] { "A", "B", "C", "D" });
+                new String[] { "(Select)", "A", "B", "C", "D" });
         adapterSeccion.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         if (spinnerSeccion != null) {
             spinnerSeccion.setAdapter(adapterSeccion);
@@ -1195,13 +1370,13 @@ public class DatosSesionesActivity extends AppCompatActivity {
         if (btnFechaInicio != null) {
             btnFechaInicio
                     .setText(sesionActual.getFechaHoraInicio() != null && !sesionActual.getFechaHoraInicio().isEmpty()
-                            ? limpiarGMT(sesionActual.getFechaHoraInicio())
+                            ? limpiarGMTHelper(sesionActual.getFechaHoraInicio())
                             : "Seleccionar fecha y hora");
         }
         if (btnFechaFinal != null) {
             btnFechaFinal
                     .setText(sesionActual.getFechaHoraFinal() != null && !sesionActual.getFechaHoraFinal().isEmpty()
-                            ? limpiarGMT(sesionActual.getFechaHoraFinal())
+                            ? limpiarGMTHelper(sesionActual.getFechaHoraFinal())
                             : "Seleccionar fecha y hora");
         }
 
@@ -1254,8 +1429,8 @@ public class DatosSesionesActivity extends AppCompatActivity {
                 if (spinnerGrado != null && spinnerSeccion != null) {
                     Object gradoObj = spinnerGrado.getSelectedItem();
                     Object seccionObj = spinnerSeccion.getSelectedItem();
-                    String grado = gradoObj != null ? gradoObj.toString() : "1";
-                    String seccion = seccionObj != null ? seccionObj.toString() : "A";
+                    String grado = gradoObj != null ? gradoObj.toString() : "(Select)";
+                    String seccion = seccionObj != null ? seccionObj.toString() : "(Select)";
                     sesionActual.setGradoSeccion(grado + " " + seccion);
                 }
             }
@@ -1280,6 +1455,13 @@ public class DatosSesionesActivity extends AppCompatActivity {
                         sesionActual.setCancionesIds(idsSeleccionados);
                         sesionActual.setCantidadCanciones(idsSeleccionados.size());
                         btnCanciones.setText(idsSeleccionados.size() + " Canciones Seleccionadas");
+                    },
+                    song -> {
+                        cancionParaVincular = song;
+                        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                        intent.setType("audio/*");
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        linkAudioLauncher.launch(intent);
                     });
             popup.show();
         });
@@ -1493,6 +1675,102 @@ public class DatosSesionesActivity extends AppCompatActivity {
         }
     }
 
+    private void vincularAudioLocal(android.net.Uri uri, Song song) {
+        try {
+            java.io.InputStream is = getContentResolver().openInputStream(uri);
+            if (is == null) {
+                Toast.makeText(this, "No se pudo leer el archivo seleccionado.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            File destFile = new File(getExternalFilesDir("media"), song.getSafeFileName());
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(destFile);
+            byte[] buffer = new byte[4096];
+            int length;
+            while ((length = is.read(buffer)) > 0) {
+                fos.write(buffer, 0, length);
+            }
+            fos.flush();
+            fos.close();
+            is.close();
+
+            Toast.makeText(this, "Archivo vinculado exitosamente.", Toast.LENGTH_SHORT).show();
+            song.setLoaded(true);
+            MediaPlayerList.getInstance().notifySongStateChanged(song.getId());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error al vincular el archivo", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void exportarInforme(List<Integer> sesionesIds, String formato, boolean plantillaExtendida) {
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance()
+                .getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "No autenticado", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this, "Generando reporte...", Toast.LENGTH_SHORT).show();
+
+        user.getIdToken(true).addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                String token = task.getResult().getToken();
+                ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+                ExportarRequest request = new ExportarRequest(sesionesIds, formato, plantillaExtendida);
+
+                Call<okhttp3.ResponseBody> call = apiService.exportarInforme("Bearer " + token, request);
+                call.enqueue(new Callback<okhttp3.ResponseBody>() {
+                    @Override
+                    public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            guardarYCompartirArchivo(response.body(), formato);
+                        } else {
+                            Toast.makeText(DatosSesionesActivity.this, "Error al generar informe", Toast.LENGTH_SHORT)
+                                    .show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                        Toast.makeText(DatosSesionesActivity.this, "Error de red: " + t.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } else {
+                Toast.makeText(DatosSesionesActivity.this, "Error obteniendo token de autenticación",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void guardarYCompartirArchivo(okhttp3.ResponseBody body, String formato) {
+        try {
+            java.io.File cachePath = new java.io.File(getCacheDir(), "informes");
+            cachePath.mkdirs();
+            String fileName = "Informe_Musicoterapia_" + System.currentTimeMillis() + "." + formato;
+            java.io.File file = new java.io.File(cachePath, fileName);
+
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(file);
+            fos.write(body.bytes());
+            fos.close();
+
+            android.net.Uri contentUri = androidx.core.content.FileProvider.getUriForFile(this,
+                    getApplicationContext().getPackageName() + ".provider", file);
+
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(contentUri, formato.equals("pdf") ? "application/pdf"
+                    : "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            Intent chooser = Intent.createChooser(intent, "Abrir informe con");
+            startActivity(chooser);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error al guardar el archivo", Toast.LENGTH_SHORT).show();
+        }
+    }
 }
 
 interface OnStringChangeListener {

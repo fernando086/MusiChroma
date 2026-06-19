@@ -67,17 +67,69 @@
                 android:backgroundTint="?attr/colorPrimary" />
         </LinearLayout>
 
-        <!-- RecyclerView ajustado para quedar debajo del menú de pestañas -->
+        <!-- Botón Agregar Fijo usando el diseño existente -->
+        <include
+            android:id="@+id/btnAgregarFijo"
+            layout="@layout/item_add_to_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            app:layout_constraintTop_toBottomOf="@id/menuPestanas"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- RecyclerView ajustado para quedar debajo del botón agregar y arriba de paginación -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/songListRecyclerView"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:padding="8dp"
-            app:layout_constraintTop_toBottomOf="@id/menuPestanas"
+            app:layout_constraintTop_toBottomOf="@id/btnAgregarFijo"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/layoutPaginacion"
             tools:listitem="@layout/item_song" />
+
+        <!-- Controles de Paginación Fijos al fondo -->
+        <LinearLayout
+            android:id="@+id/layoutPaginacion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="8dp"
+            android:background="?android:attr/colorBackground"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <Button
+                android:id="@+id/btnPaginaAnterior"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Anterior"
+                android:enabled="false"
+                android:backgroundTint="?attr/colorPrimary"
+                android:textColor="?android:attr/textColorPrimary" />
+
+            <TextView
+                android:id="@+id/tvInfoPagina"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pág. 1 / 1"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginHorizontal="16dp" />
+
+            <Button
+                android:id="@+id/btnPaginaSiguiente"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Siguiente"
+                android:enabled="false"
+                android:backgroundTint="?attr/colorPrimary"
+                android:textColor="?android:attr/textColorPrimary" />
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

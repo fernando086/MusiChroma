@@ -337,7 +337,11 @@ public class DatosMusicalesActivity extends AppCompatActivity {
             if (textViewName != null) textViewName.setText(name);
             if (textViewAuthor != null) textViewAuthor.setText(author);
             if (textViewAlbum != null) textViewAlbum.setText(album);
-            if (textViewLink != null) textViewLink.setText(link);
+            if (textViewLink != null) {
+                textViewLink.setText(link);
+                textViewLink.setEnabled(false);   // Deshabilitar edición
+                textViewLink.setFocusable(false); // Evitar que reciba el foco del teclado
+            }
         }
         
         if (etCg != null && cg != null) {
@@ -355,13 +359,12 @@ public class DatosMusicalesActivity extends AppCompatActivity {
         }
         
         // Configurar reproductor y botón de definir secciones
-        String fileName = getFilePath(link);
-        String filePath;
-        if (fileName != null) {
-            filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + fileName + ".mp3";
-        } else {
-            filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + link;
-        }
+        Song tempSong = new Song();
+        tempSong.setEnlace(link);
+        tempSong.setId(songId); // Para el sufijo eventual 'unknown_X'
+        String fileName = tempSong.getSafeFileName();
+        
+        String filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + fileName;
         File audioFile = new File(filePath);
         boolean fileExists = audioFile.exists();
         Log.e("datosMusicales","el archivo existe = " + fileExists);
@@ -376,11 +379,11 @@ public class DatosMusicalesActivity extends AppCompatActivity {
                 seekBar.getThumb().setAlpha(0);
             }
             if (playPauseButton != null) {
-                playPauseButton.setOnClickListener(v -> descargarCancion(link, name));
+                playPauseButton.setOnClickListener(v -> Toast.makeText(DatosMusicalesActivity.this, "Por favor, vincula el respectivo archivo desde el Menú Principal.", Toast.LENGTH_LONG).show());
             }
 
-            // Se actualiza la información en vivo para actualizar interfaz
-            MediaPlayerList.getInstance().getDownloadingStateLiveData().observe(this, downloadingMap -> actualizarEstadoBotonPlayPause());
+            // Ya no hay descargas en proceso, por lo que simplemente actualizamos el estado inicial
+            actualizarEstadoBotonPlayPause();
 
             MediaPlayerList.getInstance().getSongProgressLiveData(songId).observe(this, progress -> {
                 if (mediaPlayerList.isPlaying(songId)) {
@@ -396,13 +399,10 @@ public class DatosMusicalesActivity extends AppCompatActivity {
                     if (tvDuration != null) tvDuration.setText(formatTime(mediaPlayerList.getDuration(songId)));
                     actualizarEstadoBotonPlayPause();
 
-                    String newFileName = getFilePath(link);
-                    String newFilePath;
-                    if (newFileName != null) {
-                        newFilePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + newFileName + ".mp3";
-                    } else {
-                        newFilePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + link;
-                    }
+                    Song ts = new Song();
+                    ts.setEnlace(link);
+                    ts.setId(songId);
+                    String newFilePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + ts.getSafeFileName();
 
                     File newAudioFile = new File(newFilePath);
                     if (newAudioFile.exists()) {
@@ -431,13 +431,10 @@ public class DatosMusicalesActivity extends AppCompatActivity {
         if (btnDefineSections != null) {
             List<Seccion> seccionesActuales = seccionesStr;
             btnDefineSections.setOnClickListener(v -> {
-                String fileNameCheck = getFilePath(link);
-                String filePathCheck;
-                if (fileNameCheck != null) {
-                    filePathCheck = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + fileNameCheck + ".mp3";
-                } else {
-                    filePathCheck = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + link;
-                }
+                Song ts2 = new Song();
+                ts2.setEnlace(link);
+                ts2.setId(songId);
+                String filePathCheck = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + ts2.getSafeFileName();
                 File audioFileCheck = new File(filePathCheck);
                 boolean fileExistsNow = audioFileCheck.exists();
 
@@ -648,16 +645,10 @@ public class DatosMusicalesActivity extends AppCompatActivity {
         boolean isDownloading = MediaPlayerList.getInstance().isAnySongDownloading(); // 🔹 Detecta si hay alguna descarga en curso
         boolean isThisDownloading = MediaPlayerList.getInstance().isDownloading(songId); // 🔹 Detecta si esta canción se está descargando
 
-        // Determinar si es un enlace de YouTube o un archivo local
-        String fileName = getFilePath(link); // Devuelve null si no es un enlace de YouTube
-        String filePath;
-        if (fileName == null) {
-            // Es un archivo local, usar directamente el nombre del archivo
-            filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + link;
-        } else {
-            // Es un enlace de YouTube, agregar extensión .mp3
-            filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + fileName + ".mp3";
-        }
+        Song ts_btn = new Song();
+        ts_btn.setEnlace(link);
+        ts_btn.setId(songId);
+        String filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + ts_btn.getSafeFileName();
 
         boolean fileExists = new File(filePath).exists();
         boolean isPlaying = mediaPlayerList.isPlaying(songId);
@@ -685,8 +676,8 @@ public class DatosMusicalesActivity extends AppCompatActivity {
             }
         } else {
             playPauseButton.setEnabled(true);
-            playPauseButton.setImageResource(R.drawable.iconodescargar);
-            Log.e("DatosMusicales", "Estado: Canción no descargada. Botón actualizado a descargar.");
+            playPauseButton.setImageResource(R.drawable.cadena); // Ícono BYOM de vinculación
+            Log.e("DatosMusicales", "Estado: Archivo de canción no vinculado localmente. Botón actualizado a cadena.");
         }
     }
 
@@ -698,178 +689,7 @@ public class DatosMusicalesActivity extends AppCompatActivity {
         return String.format("%02d:%02d.%03d", minutos, segundos, milis);
     }
 
-    private String getFilePath(String youtubeUrl) {
-        if (youtubeUrl == null || youtubeUrl.isEmpty()) return null;
 
-        // Extraer los 11 caracteres del ID del video
-        String videoId = "";
-        Pattern pattern = Pattern.compile("v=([a-zA-Z0-9_-]{11})|/videos/([a-zA-Z0-9_-]{11})|embed/([a-zA-Z0-9_-]{11})|youtu\\.be/([a-zA-Z0-9_-]{11})|/v/([a-zA-Z0-9_-]{11})|/e/([a-zA-Z0-9_-]{11})|watch\\?v=([a-zA-Z0-9_-]{11})|/shorts/([a-zA-Z0-9_-]{11})|/live/([a-zA-Z0-9_-]{11})");
-        Matcher matcher = pattern.matcher(youtubeUrl);
-
-        if (matcher.find()) {
-            for (int i = 1; i <= matcher.groupCount(); i++) {
-                if (matcher.group(i) != null) {
-                    return matcher.group(i); // Retorna el primer grupo no nulo (ID del video)
-                }
-            }
-        }
-
-        if (videoId.isEmpty()) return null;
-
-        // Construir la ruta del archivo
-        return videoId;
-    }
-
-    private void descargarCancion(String youtubeLink, String name) {
-        Toast.makeText(this, "Descargando: " + name, Toast.LENGTH_SHORT).show();
-        MediaPlayerList.getInstance().setDownloading(songId, true);
-        MediaPlayerList.getInstance().updateButtonState(playPauseButton, songId);
-
-        boolean isYoutubeLink = getFilePath(youtubeLink) != null;
-        audioService = ApiClient.getRetrofitForLargeTransfers().create(ApiService.class);
-
-        if (isYoutubeLink) {
-            AudioRequest request = new AudioRequest(youtubeLink);
-            audioService.getAudio(request).enqueue(new Callback<ResponseBody>() {
-                @Override
-                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        Log.e("AUDIO_STREAM", "Recibiendo datos de audio en streaming...");
-
-                        try {
-                            // Crear archivo local en la carpeta correcta
-                            File directory = new File(getExternalFilesDir(null), "media");
-                            if (!directory.exists()) {
-                                directory.mkdirs();
-                            }
-                            File audioFile = new File(directory, getFilePath(youtubeLink) + ".mp3");
-
-                            // **Iniciar la descarga usando DownloadAudioTask**
-                            new DownloadAudioTask(response.body().byteStream(), audioFile, name, playPauseButton, seekBar, tvDuration).execute();
-
-                        } catch (Exception e) {
-                            Log.e("AUDIO_STREAM", "Error al iniciar la descarga", e);
-                        }
-                    } else {
-                        Log.e("API_ERROR", "Error al obtener URL del audio: " + response.message());
-                        MediaPlayerList.getInstance().setDownloading(songId, false);
-                        MediaPlayerList.getInstance().updateButtonState(playPauseButton, songId);
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<ResponseBody> call, Throwable t) {
-                    Log.e("API_ERROR", "Falló la llamada a getAudio", t);
-                    MediaPlayerList.getInstance().setDownloading(songId, false);
-                    MediaPlayerList.getInstance().updateButtonState(playPauseButton, songId);
-                }
-            });
-        } else {
-            // 🧾 Archivo subido desde el dispositivo
-            ArchivoRequest request = new ArchivoRequest(songId);
-            audioService.getArchivo(request).enqueue(new Callback<ResponseBody>() {
-                @Override
-                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                    procesarRespuestaDeAudio(response, new File(getExternalFilesDir("media"), youtubeLink));
-                }
-
-                @Override
-                public void onFailure(Call<ResponseBody> call, Throwable t) {
-                    manejarErrorDescarga();
-                }
-            });
-        }
-    }
-
-    private void procesarRespuestaDeAudio(Response<ResponseBody> response, File destino) {
-        if (response.isSuccessful() && response.body() != null) {
-            try {
-                new DownloadAudioTask(
-                        response.body().byteStream(),
-                        destino,
-                        name,
-                        playPauseButton,
-                        seekBar,
-                        tvDuration
-                ).execute();
-            } catch (Exception e) {
-                Log.e("AUDIO_STREAM", "Error guardando el archivo", e);
-            }
-        } else {
-            Log.e("API_ERROR", "Respuesta inválida del servidor");
-            manejarErrorDescarga();
-        }
-    }
-
-    private void manejarErrorDescarga() {
-        MediaPlayerList.getInstance().setDownloading(songId, false);
-        MediaPlayerList.getInstance().updateButtonState(playPauseButton, songId);
-        Toast.makeText(this, "Error al descargar el archivo", Toast.LENGTH_SHORT).show();
-    }
-
-    private class DownloadAudioTask extends AsyncTask<Void, Void, Boolean> {
-        private InputStream inputStream;
-        private File audioFile;
-        private String name;
-        private ImageButton playPauseButton;
-        private SeekBar seekBar;
-        private TextView tvDuration;
-
-        public DownloadAudioTask(InputStream inputStream, File audioFile, String name, ImageButton playPauseButton, SeekBar seekBar, TextView tvDuration) {
-            this.inputStream = inputStream;
-            this.audioFile = audioFile;
-            this.name = name;
-            this.playPauseButton = playPauseButton;
-            this.seekBar = seekBar;
-            this.tvDuration = tvDuration;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... voids) {
-            try {
-                FileOutputStream outputStream = new FileOutputStream(audioFile);
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-                outputStream.flush();
-                outputStream.close();
-                inputStream.close();
-                return true;
-            } catch (IOException e) {
-                Log.e("DownloadAudioTask", "Error al guardar el archivo de audio", e);
-                return false;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Boolean success) {
-            Log.e("datosMusicales","success = " + success);
-            MediaPlayerList.getInstance().setDownloading(songId, false);
-            MediaPlayerList.getInstance().updateButtonState(playPauseButton, songId);
-
-            if (success && audioFile.exists() && audioFile.length() > 0) {
-                Toast.makeText(DatosMusicalesActivity.this, "Descarga completa de " + name, Toast.LENGTH_SHORT).show();
-
-                // Cambiar a ícono de reproducción
-                playPauseButton.setImageResource(R.drawable.iconoplay); // Cambiar a icono de reproducción
-
-                // 🔹 Reinicializar el MediaPlayer en MediaPlayerList con el archivo descargado
-                mediaPlayerList.resetMediaPlayer(songId, String.valueOf(audioFile)); // ✅ Nueva función
-
-                // 🔹 🔥 Reconfigurar el reproductor después de la descarga
-                inicializarReproductor();
-
-                // 🔹 🔥 Comenzar la actualización del SeekBar
-                startSeekBarUpdate();
-
-                playPauseButton.setEnabled(true);
-            } else {
-                Toast.makeText(DatosMusicalesActivity.this, "Error en la descarga de " + name, Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
 
     private void inicializarReproductor() {
         if (mediaPlayerList.isSongLoaded(songId)) {
@@ -954,13 +774,22 @@ public class DatosMusicalesActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     int currentPosition = mediaPlayerList.getCurrentPosition(songId);
-                    seekBar.setProgress(currentPosition);
-                    tvProgress.setText(formatTime(currentPosition));
+                    if (seekBar != null) {
+                        seekBar.setProgress(currentPosition);
+                    }
+                    if (tvProgress != null) {
+                        tvProgress.setText(formatTime(currentPosition));
+                    }
 
                     // 🔹 Asegurar que el progreso se sincroniza con otras interfaces
                     mediaPlayerList.notifyProgressChanged(songId, currentPosition);
 
-                    handler.postDelayed(this, 100);
+                    if (mediaPlayerList.isPlaying(songId)) {
+                        playPauseButton.setImageResource(R.drawable.iconopause);
+                        handler.postDelayed(this, 100);
+                    } else {
+                        playPauseButton.setImageResource(R.drawable.iconoplay);
+                    }
                 }
             };
         }
@@ -1080,18 +909,17 @@ public class DatosMusicalesActivity extends AppCompatActivity {
         return String.format("%02d:%02d", minutes, seconds);
     }
 
-    /*
     @Override
     protected void onDestroy() {
         Log.e("DatosMusicales","ejecutando destroy");
         super.onDestroy();
-        if (handler != null) {
+        if (handler != null && updateSeekBar != null) {
             handler.removeCallbacks(updateSeekBar);
         }
         if (isFinishing()) { // Solo si la app realmente se cierra
             Log.e("DatosMusicales","ejecutando isfinishing");
         }
-    }*/
+    }
 
     @SuppressLint("MissingSuperCall")
     @Override

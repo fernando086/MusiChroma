@@ -62,7 +62,7 @@ def verify_token():
 
     try:
         # Verificar el token recibido
-        decoded_token = auth.verify_id_token(token)
+        decoded_token = auth.verify_id_token(token, clock_skew_seconds=60)
         uid = decoded_token['uid']
         print("Token válido.")
         return jsonify({"message": "Token válido", "user_id": uid}), 200
@@ -91,16 +91,26 @@ def get_db_connection():
 
 @app.route('/usuarios')
 def get_usuarios():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM usuario')
-    usuario = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(usuario)
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM usuario')
+        usuario = cursor.fetchall()
+        return jsonify(usuario)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # Función para agregar un usuario a PostgreSQL si no existe
 def agregar_usuario_si_no_existe(nombre, uid):
+    conn = None
+    cursor = None
     try:
         # Conexión a PostgreSQL
         conn = psycopg2.connect(
@@ -131,8 +141,11 @@ def agregar_usuario_si_no_existe(nombre, uid):
 
     except Exception as e:
         print(f"Error al agregar o verificar usuario: {e}")
-    cursor.close()
-    conn.close()
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/get_user', methods=['POST'])
 def get_user():
@@ -140,7 +153,7 @@ def get_user():
 
     try:
         # Verificar el token
-        decoded_token = auth.verify_id_token(token)
+        decoded_token = auth.verify_id_token(token, clock_skew_seconds=60)
         uid = decoded_token['uid']
 
         # Conectar a PostgreSQL
@@ -292,7 +305,7 @@ def update_username():
 
     try:
         # Verificar el token y obtener el firebase_uid
-        decoded_token = auth.verify_id_token(user_token)
+        decoded_token = auth.verify_id_token(user_token, clock_skew_seconds=60)
         firebase_uid = decoded_token['uid']
         print("Firebase UID: ", firebase_uid)
     except Exception as e:
@@ -549,11 +562,15 @@ def descargar_audio_yield(enlace):
     proceso = subprocess.Popen(comando, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     def generar():
-        while True:
-            chunk = proceso.stdout.read(8192)  # Lee en bloques de 8KB
-            if not chunk:
-                break
-            yield chunk  # Se envía directamente al usuario
+        try:
+            while True:
+                chunk = proceso.stdout.read(8192)  # Lee en bloques de 8KB
+                if not chunk:
+                    break
+                yield chunk  # Se envía directamente al usuario
+        finally:
+            proceso.terminate()
+            proceso.wait()
     
     return flask.stream_with_context(generar())
 
@@ -564,6 +581,8 @@ def get_audio():
 
 @app.route('/api/get_secciones', methods=['GET'])
 def get_secciones():
+    conn = None
+    cursor = None
     try:
         cancion_id = request.args.get('cancion_id')  # Obtener el ID de la canción desde la solicitud
 
@@ -583,8 +602,6 @@ def get_secciones():
         cursor.execute(query, (cancion_id,))
         secciones = cursor.fetchall()
         print("get_secciones dice: fetch all listo")
-        cursor.close()
-        conn.close()
 
         # Convertir los resultados en una lista de diccionarios
         lista_secciones = []
@@ -607,214 +624,13 @@ def get_secciones():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
     
-def procesar_audio_desde_enlace(enlace_youtube):
-    """
-    Procesa audio desde un enlace de YouTube y devuelve valence/arousal por secciones usando Keras
-    """
-    try:
-        import yt_dlp
-        
-        # 🔹 ENCONTRAR LA RUTA DE FFMPEG
-        ffmpeg_path = "C:/ffmpeg/bin/ffmpeg.exe"
-        ffprobe_path = "C:/ffmpeg/bin/ffprobe.exe"
-        
-        # Verificar que los archivos existen
-        if not os.path.exists(ffmpeg_path):
-            # Intentar rutas alternativas comunes
-            alternative_paths = [
-                "C:\\ffmpeg\\bin\\ffmpeg.exe",
-                "C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe",
-                "C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe",
-                os.path.join(os.environ.get('PROGRAMFILES', ''), "ffmpeg", "bin", "ffmpeg.exe"),
-                os.path.join(os.environ.get('PROGRAMFILES(X86)', ''), "ffmpeg", "bin", "ffmpeg.exe"),
-            ]
-            
-            for path in alternative_paths:
-                if os.path.exists(path):
-                    ffmpeg_path = path
-                    ffprobe_path = path.replace("ffmpeg.exe", "ffprobe.exe")
-                    break
-            else:
-                print("❌ FFmpeg no encontrado. Usando método alternativo...")
-                return procesar_audio_sin_ffmpeg(enlace_youtube)
-        
-        # 🔹 OPCIONES MEJORADAS para yt-dlp
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': os.path.join(tempfile.gettempdir(), '%(id)s.%(ext)s'),
-            'quiet': True,
-            'extractor_args': {'youtube': ['player_client=android,web']}, # Bypasses 403 issue
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'wav',
-                'preferredquality': '192',
-            }],
-            'ffmpeg_location': os.path.dirname(ffmpeg_path),
-        }
-        
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(enlace_youtube, download=True)
-            temp_audio_path = ydl.prepare_filename(info)
-            
-            # Obtener la ruta del archivo de audio convertido
-            base_path = os.path.splitext(temp_audio_path)[0]
-            temp_audio_path_wav = base_path + '.wav'
-            
-            if not os.path.exists(temp_audio_path_wav):
-                print(f"⚠️ Archivo WAV no encontrado, usando el original: {temp_audio_path}")
-                temp_audio_path_wav = temp_audio_path
-        
-        # Leer archivo y procesar
-        with open(temp_audio_path_wav, 'rb') as f:
-            audio_bytes = f.read()
-        
-        # 🔹 CAMBIAR: Usar predicción por secciones en lugar de completa
-        resultados = predecir_audio_por_secciones(audio_bytes)
-            
-        # Limpiar archivos temporales
-        try:
-            for path in [temp_audio_path, temp_audio_path_wav]:
-                if os.path.exists(path):
-                    os.remove(path)
-        except Exception as e:
-            print(f"⚠️ Error limpiando archivos temporales: {e}")
-        
-        return resultados  # 🔹 Devolver lista de secciones con predicciones
-        
-    except Exception as e:
-        print(f"❌ Error procesando audio desde enlace: {e}")
-        import traceback
-        traceback.print_exc()
-        return [{"tiempo_inicio": 0.0, "tiempo_final": 10.0, "valence": 0.5, "arousal": 0.5}]
-    
-def procesar_audio_sin_ffmpeg(enlace_youtube):
-    """
-    Método alternativo cuando FFmpeg no está disponible
-    """
-    try:
-        import yt_dlp
-        
-        # 🔹 Descargar solo el audio sin postprocesamiento
-        ydl_opts = {
-            'format': 'bestaudio[ext=m4a]/bestaudio',
-            'outtmpl': os.path.join(tempfile.gettempdir(), '%(id)s.%(ext)s'),
-            'extractor_args': {'youtube': ['player_client=android,web']},
-            'quiet': True,
-        }
-        
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(enlace_youtube, download=True)
-            temp_audio_path = ydl.prepare_filename(info)
-        
-        # Leer archivo y procesar
-        with open(temp_audio_path, 'rb') as f:
-            audio_bytes = f.read()
-        
-        # 🔹 CAMBIAR: Usar predicción por secciones
-        resultados = predecir_audio_por_secciones(audio_bytes)
-                
-        # Limpiar
-        try:
-            if os.path.exists(temp_audio_path):
-                os.remove(temp_audio_path)
-        except:
-            pass
-            
-        return resultados  # 🔹 Devolver lista de secciones
-        
-    except Exception as e:
-        print(f"❌ Error en método alternativo: {e}")
-        return [{"tiempo_inicio": 0.0, "tiempo_final": 10.0, "valence": 0.5, "arousal": 0.5}]
-    
-@app.route('/api/subir_enlace', methods=['POST'])
-def subir_enlace():
-    enlace = request.form.get('enlace')
-    usuario_id = request.form.get('usuario_id')
 
-    if not enlace or not usuario_id:
-        return jsonify({"error": "Faltan datos"}), 400
-
-    try:
-        import yt_dlp
-        import datetime
-        import os
-
-        # 🔹 Ruta absoluta al archivo de cookies
-        cookie_path = os.path.join(os.path.dirname(__file__), "www.youtube.com_cookies.txt")
-
-        # 🔹 Verifica que el archivo exista antes de continuar
-        if not os.path.exists(cookie_path):
-            print("⚠️ Advertencia: No se encontró el archivo de cookies:", cookie_path)
-            cookie_file_arg = None
-        else:
-            print("✅ Archivo de cookies detectado:", cookie_path)
-            cookie_file_arg = cookie_path
-
-        # Extraer información usando yt-dlp
-        ydl_opts = {
-            'quiet': True, # Evitar salida innecesaria
-            'skip_download': True, # No descargar el video
-            'forcejson': True, # Forzar salida en JSON
-            'extract_flat': False, # Extraer información completa
-            'extractor_args': {'youtube': ['player_client=android,web']}, # Evitar error 403
-            'format': 'bestaudio/best', # Pedir directamente el mejor audio para evitar que busque formatos que requieren firmas complejas
-            'ignoreerrors': True, # Continuar incluso si falla en obtener algún formato específico
-        }
-        
-        # Agregamos cookies solo si existen para evitar crasheos si se borran
-        if cookie_file_arg:
-            ydl_opts['cookiefile'] = cookie_file_arg
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Añadir process=False es la clave: extrae metadatos (título, autor)
-            # sin intentar resolver las firmas de los formatos de video/audio.
-            info = ydl.extract_info(enlace, download=False, process=False)
-            
-        if info is None:
-            info = {}
-            print("⚠️ yt-dlp devolvió None al extraer metadatos. Se usarán valores desconocidos temporales.")
-
-        nombre = info.get('title', 'Unknown Title')
-        print("subir_enlace: titulo de enlace youtube: ", nombre)
-        autor = info.get('uploader', 'Unknown Author')
-        album = info.get('album', None)
-        duracion_segundos = info.get('duration', 0)
-        duracion_time = str(datetime.timedelta(seconds=duracion_segundos))  # HH:MM:SS
-
-        # 🔹 CAMBIAR: Obtener predicciones por secciones en lugar de valores únicos
-        secciones_predicciones = procesar_audio_desde_enlace(enlace)
-
-        print("ENLACE EXTRAÍDO:", nombre, autor, album, duracion_time)
-        print("[Predicciones por Secciones]:")
-        
-        # Validación extra: si procesar_audio_desde_enlace falla, retorna una predicción default válida
-        if not secciones_predicciones or len(secciones_predicciones) == 0:
-            print("⚠️ Advertencia: No se obtuvieron predicciones válidas, utilizando valor por defecto.")
-            secciones_predicciones = [{"tiempo_inicio": 0.0, "tiempo_final": max(10.0, duracion_segundos), "valence": 0.5, "arousal": 0.5}]
-            
-        for i, seccion in enumerate(secciones_predicciones):
-            print(f"  Sección {i+1}: {seccion.get('tiempo_inicio', 0):.1f}s - {seccion.get('tiempo_final', 10):.1f}s | V={seccion.get('valence', 0.5):.4f}, A={seccion.get('arousal', 0.5):.4f}")
-
-        # 🔹 NO guardar en base de datos - solo retornar metadatos y predicciones
-        import time
-        temp_id = int(time.time() * -1)  # ID temporal negativo
-
-        return jsonify({
-            "mensaje": "Enlace procesado exitosamente",
-            "id": temp_id,
-            "nombre": nombre,
-            "autor": autor,
-            "album": album,
-            "duracion": duracion_time,
-            "secciones": secciones_predicciones,  # 🔹 Devolver las secciones con predicciones
-            "temporal": True
-        }), 200
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"Error descargando audio (403 Forbidden). Intenta actualizar cookies. Detalle: {str(e)}"}), 500
 
 @app.route('/api/sesion/delete', methods=['POST'])
 def eliminar_sesion():
@@ -925,6 +741,58 @@ def subir_audio():
         "secciones": secciones_predicciones,  # 🔹 Devolver las secciones con predicciones
         "temporal": True
     }), 200
+
+@app.route('/api/subir_audio_lote', methods=['POST'])
+def subir_audio_lote():
+    if 'archivos' not in request.files:
+        return jsonify({"error": "No se enviaron archivos"}), 400
+
+    archivos = request.files.getlist('archivos')
+    usuario_id = request.form.get('usuario_id')
+    metadatos_json = request.form.get('metadatos')
+
+    if not usuario_id:
+        return jsonify({"error": "No se envió usuario_id"}), 400
+
+    if not metadatos_json:
+        return jsonify({"error": "No se enviaron metadatos"}), 400
+
+    import json
+    import time
+    try:
+        metadatos = json.loads(metadatos_json)
+    except Exception as e:
+        return jsonify({"error": "Formato de metadatos inválido"}), 400
+
+    if len(archivos) != len(metadatos):
+        return jsonify({"error": "La cantidad de archivos no coincide con la cantidad de metadatos"}), 400
+
+    resultados = []
+
+    for idx, archivo in enumerate(archivos):
+        if archivo.filename == '' or not allowed_file(archivo.filename) or not archivo.mimetype.startswith('audio/'):
+            continue
+
+        meta = metadatos[idx]
+        nombre_sin_extension = re.sub(r'\.(mp3|wav|ogg)$', '', meta.get('nombre_archivo', archivo.filename), flags=re.IGNORECASE)
+        duracion = meta.get('tiempo_fin', "00:00:00.000")
+
+        contenido_bytes = archivo.read()
+        
+        # Procesamiento Keras
+        secciones_predicciones = predecir_audio_por_secciones(contenido_bytes)
+        
+        temp_id = int(time.time() * -1) - idx  # ID temporal negativo único
+
+        resultados.append({
+            "id": temp_id,
+            "nombre": nombre_sin_extension,
+            "duracion": duracion,
+            "secciones": secciones_predicciones,
+            "temporal": True
+        })
+
+    return jsonify(resultados), 200
 
 @app.route('/api/guardar_sesion', methods=['POST'])
 def guardar_sesion():
@@ -1153,9 +1021,14 @@ def guardar_cancion_definitiva():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        if request.content_type.startswith('multipart/form-data'):
-            # 🟢 Caso archivo local
+        if request.content_type and request.content_type.startswith('multipart/form-data'):
+            # 🟢 Caso archivo local (Arquitectura BYOM Estricto)
             archivo = request.files.get('archivo')
+            nombre_archivo_form = request.form.get('nombre_archivo')
+            
+            # Nombre de archivo a guardar (metadato para la BD)
+            enlace_guardar = nombre_archivo_form if nombre_archivo_form else (archivo.filename if archivo else None)
+            
             usuario_id = request.form.get('usuario_id')
             nombre = request.form.get('nombre')
             autor = request.form.get('autor')
@@ -1165,34 +1038,20 @@ def guardar_cancion_definitiva():
             secciones_json = request.form.get('secciones')
             secciones = json.loads(secciones_json) if secciones_json else []
 
-            archivo_bytes = archivo.read() if archivo else None
-
-            cursor.execute("""
-                INSERT INTO cancion (nombre, autor, album, enlace, archivo, usuario_id, estado_publicado)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id;
-            """, (
-                nombre, autor, album,
-                archivo.filename if archivo else None,
-                psycopg2.Binary(archivo_bytes) if archivo_bytes else None,
-                int(usuario_id), True
-            ))
-
-        else:
-            # 🟢 Caso JSON (YouTube)
-            data = request.get_json()
-            usuario_id = data.get("usuario_id")
-            secciones = data.get("secciones", [])
+            # 🔹 Se elimina la lectura de archivo_bytes para no guardar en BD
+            # archivo_bytes = archivo.read() if archivo else None
 
             cursor.execute("""
                 INSERT INTO cancion (nombre, autor, album, enlace, usuario_id, estado_publicado)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id;
             """, (
-                data.get("nombre"), data.get("autor"),
-                data.get("album"), data.get("enlace"),
+                nombre, autor, album,
+                enlace_guardar,
                 int(usuario_id), True
             ))
+        else:
+            return jsonify({"error": "Solo se permite subir archivos a través de multipart/form-data. El formato de enlace de YouTube ha sido deprecado."}), 400
 
         cancion_id = cursor.fetchone()[0]
 
@@ -2057,6 +1916,104 @@ def _decode_audio_b64(b64str):
         return Binary(base64.b64decode(b64str)) if b64str else None
     except Exception:
         return None       # opcional: loggear error
+
+from flask import send_file
+import exportador
+
+@app.route('/api/exportar_informe', methods=['POST'])
+def exportar_informe():
+    user_token = request.headers.get("Authorization")
+    if not user_token:
+        print("[EXPORTAR] Error: Token no proporcionado")
+        return jsonify({'error': 'Token no proporcionado'}), 401
+
+    if user_token.startswith("Bearer "):
+        user_token = user_token.split(" ")[1]
+
+    try:
+        decoded_token = auth.verify_id_token(user_token, clock_skew_seconds=60)
+        firebase_uid = decoded_token['uid']
+    except Exception as e:
+        print("[EXPORTAR] Error al verificar token:", str(e))
+        return jsonify({'error': 'Token inválido', 'details': str(e)}), 401
+    try:
+        data = request.json
+        sesiones_ids = data.get('sesiones_ids', [])
+        formato = data.get('formato', 'docx')
+        plantilla_extendida = data.get('plantilla_extendida', False)
+
+        if not sesiones_ids:
+            return jsonify({"error": "No se proporcionaron sesiones"}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute("SELECT id FROM usuario WHERE firebase_uid = %s", (firebase_uid,))
+        user_row = cur.fetchone()
+        if not user_row:
+            cur.close()
+            conn.close()
+            return jsonify({'error': 'Usuario no encontrado en la base de datos'}), 404
+        
+        usuario_id = user_row['id']
+
+        format_strings = ','.join(['%s'] * len(sesiones_ids))
+        
+        if plantilla_extendida:
+            query = f"""
+                SELECT s.*, 
+                       COALESCE(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT('nombre', c.nombre, 'autor', c.autor, 'album', c.album)) FILTER (WHERE c.id IS NOT NULL), '[]') AS canciones_data,
+                       COALESCE(JSONB_AGG(DISTINCT JSONB_BUILD_OBJECT('palabra', sp.term, 'emocion', sp.emotion)) FILTER (WHERE sp.term IS NOT NULL), '[]') AS emociones_data
+                FROM sesion s
+                LEFT JOIN sesion_cancion sc ON s.id = sc.sesion_id
+                LEFT JOIN cancion c ON sc.cancion_id = c.id
+                LEFT JOIN sesion_palabra sp ON s.id = sp.sesion_id
+                WHERE s.id IN ({format_strings}) AND s.usuario_id = %s
+                GROUP BY s.id
+                ORDER BY s.numero_sesion ASC
+            """
+            cur.execute(query, tuple(sesiones_ids) + (usuario_id,))
+        else:
+            cur.execute(f"SELECT * FROM sesion WHERE id IN ({format_strings}) AND usuario_id=%s ORDER BY numero_sesion ASC", tuple(sesiones_ids) + (usuario_id,))
+        
+        sesiones = cur.fetchall()
+
+        if not sesiones:
+            return jsonify({"error": "No se encontraron las sesiones"}), 404
+
+        # Limpiar/formatear datos
+        for s in sesiones:
+            s['fecha_hora_inicio'] = str(s.get('fecha_hora_inicio', '')) if s.get('fecha_hora_inicio') else ''
+            s['fecha_hora_final'] = str(s.get('fecha_hora_final', '')) if s.get('fecha_hora_final') else ''
+
+        if formato == 'pdf':
+            file_stream = exportador.crear_pdf_sesiones(sesiones, plantilla_extendida)
+            mimetype = 'application/pdf'
+            filename = 'Informe_Musicoterapia.pdf'
+        else:
+            file_stream = exportador.crear_docx_sesiones(sesiones, plantilla_extendida)
+            mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            filename = 'Informe_Musicoterapia.docx'
+
+        if file_stream is None:
+            return jsonify({"error": "Error generando el archivo"}), 500
+
+        return send_file(
+            file_stream,
+            as_attachment=True,
+            download_name=filename,
+            mimetype=mimetype
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
 
 if __name__ == "__main__":
     app.run(debug=True)

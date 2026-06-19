@@ -159,8 +159,8 @@ public class RuedaEmocionalDialogFragmentSesion extends DialogFragment {
             String linea;
             reader.readLine(); // Omitir encabezado
             while ((linea = reader.readLine()) != null) {
-                String[] partes = linea.trim().split(",");
-                if (partes.length >= 6) {
+                String[] partes = linea.trim().replace("\"", "").split(",");
+                if (partes.length >= 7) {
                     String term = partes[0].trim().toLowerCase();
                     conteoPalabras.put(term, conteoPalabras.getOrDefault(term, 0) + 1);
                 }
@@ -175,12 +175,12 @@ public class RuedaEmocionalDialogFragmentSesion extends DialogFragment {
             String linea;
             reader.readLine(); // Omitir encabezado
             while ((linea = reader.readLine()) != null) {
-                String[] partes = linea.trim().split(",");
-                if (partes.length >= 6) {
+                String[] partes = linea.trim().replace("\"", "").split(",");
+                if (partes.length >= 7) {
                     String term = partes[0].trim();
                     if (conteoPalabras.getOrDefault(term.toLowerCase(), 0) == 1) {
-                        String emocion = partes[1].trim();
-                        String nivel = partes[5].trim();
+                        String emocion = partes[2].trim();
+                        String nivel = partes[6].trim();
                         int bgColorRes = ((DatosSesionesActivity) getActivity()).getColorForEmotion(emocion, nivel);
                         int textColor = "bajo".equalsIgnoreCase(nivel) ? Color.BLACK : Color.WHITE;
                         listaGlobal.add(new PalabraEmocionalUnica(term, emocion, nivel, ContextCompat.getColor(getContext(), bgColorRes), textColor));
@@ -208,10 +208,10 @@ public class RuedaEmocionalDialogFragmentSesion extends DialogFragment {
             String linea;
             reader.readLine(); // Omitir el encabezado
             while ((linea = reader.readLine()) != null) {
-                String[] partes = linea.trim().split(",");
-                if (partes.length >= 2) {
+                String[] partes = linea.trim().replace("\"", "").split(",");
+                if (partes.length >= 3) {
                     String term = partes[0].trim().toLowerCase();
-                    String emotion = partes[1].trim().toLowerCase();
+                    String emotion = partes[2].trim().toLowerCase();
 
                     palabraAEmociones.putIfAbsent(term, new HashSet<>());
                     palabraAEmociones.get(term).add(emotion);
@@ -347,11 +347,11 @@ public class RuedaEmocionalDialogFragmentSesion extends DialogFragment {
             String linea;
             reader.readLine(); // Omitir encabezado
             while ((linea = reader.readLine()) != null) {
-                String[] partes = linea.trim().split(",");
-                if (partes.length >= 6) {
+                String[] partes = linea.trim().replace("\"", "").split(",");
+                if (partes.length >= 7) {
                     String term = partes[0].trim();
-                    String emotionArchivo = partes[1].trim();
-                    String nivel = partes[5].trim();
+                    String emotionArchivo = partes[2].trim();
+                    String nivel = partes[6].trim();
 
                     // Solo agregar si la palabra no está en la lista de repetidas
                     if (!palabrasRepetidas.contains(term.toLowerCase()) && emotionArchivo.equalsIgnoreCase(emocion) && nivel.equalsIgnoreCase(nivelArousal)) {

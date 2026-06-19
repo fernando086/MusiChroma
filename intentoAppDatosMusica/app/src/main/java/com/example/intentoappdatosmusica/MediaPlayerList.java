@@ -97,6 +97,9 @@ public class MediaPlayerList {
             try {
                 mediaPlayer.setDataSource(filePath);
                 mediaPlayer.prepare(); // Prepara el MediaPlayer para la reproducción
+                mediaPlayer.setOnCompletionListener(mp -> {
+                    notifySongStateChanged(songId);
+                });
             } catch (IOException e) {
                 e.printStackTrace();
                 return null; // Retorna null si hay un error para evitar estados inconsistentes
@@ -173,6 +176,9 @@ public class MediaPlayerList {
                 try {
                     mediaPlayer.setDataSource(filePath);
                     mediaPlayer.prepare();
+                    mediaPlayer.setOnCompletionListener(mp -> {
+                        notifySongStateChanged(songId);
+                    });
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -183,6 +189,9 @@ public class MediaPlayerList {
             try {
                 newMediaPlayer.setDataSource(filePath);
                 newMediaPlayer.prepare();
+                newMediaPlayer.setOnCompletionListener(mp -> {
+                    notifySongStateChanged(songId);
+                });
                 mediaPlayerMap.put(songId, newMediaPlayer);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -213,6 +222,10 @@ public class MediaPlayerList {
     public void play(int songId) {
         MediaPlayer mediaPlayer = mediaPlayerMap.get(songId);
         if (mediaPlayer != null && !mediaPlayer.isPlaying()) {
+            // Si la canción ha terminado, reiniciar la posición al darle play
+            if (mediaPlayer.getCurrentPosition() >= mediaPlayer.getDuration() - 150) {
+                mediaPlayer.seekTo(0);
+            }
             mediaPlayer.start();
             notifySongStateChanged(songId); // Notificar reproducción
             notifyProgressChanged(songId, mediaPlayer.getCurrentPosition()); // 🔹 Sincronizar progreso

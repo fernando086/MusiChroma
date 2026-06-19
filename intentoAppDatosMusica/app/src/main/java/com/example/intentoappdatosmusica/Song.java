@@ -4,8 +4,6 @@ import android.util.Log;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Song implements Serializable {
     private int id;
@@ -134,18 +132,7 @@ public class Song implements Serializable {
 
     public String getFilePath() {
         if (enlace == null || enlace.isEmpty()) return null;
-
-        Pattern pattern = Pattern.compile("v=([a-zA-Z0-9_-]{11})|youtu\\.be/([a-zA-Z0-9_-]{11})|embed/([a-zA-Z0-9_-]{11})");
-        Matcher matcher = pattern.matcher(enlace);
-
-        if (matcher.find()) {
-            for (int i = 1; i <= matcher.groupCount(); i++) {
-                if (matcher.group(i) != null) {
-                    return matcher.group(i); // Retorna el primer grupo no nulo (ID del video)
-                }
-            }
-        }
-        return null;
+        return enlace; // En BYOM, el enlace es ya el filename local
     }
 
     public Seccion getSeccionActual(int currentPositionMs) {
@@ -176,5 +163,19 @@ public class Song implements Serializable {
         } catch (Exception e) {
             return 0;
         }
+    }
+
+    public String getSafeFileName() {
+        if (enlace == null || enlace.trim().isEmpty()) {
+            return "unknown_" + id + ".mp3";
+        }
+        // Reemplaza caracteres prohibidos en cualquier Sistema de Archivos para evitar FileNotFounds
+        String safeName = enlace.replaceAll("[\\\\/:*?\"<>|]", "_");
+        
+        // Si originalmente era una URL de Youtube, probablemente carece de la extensión de audio mp3, así que la agregamos explícitamente.
+        if (enlace.contains("youtube.com") || enlace.contains("youtu.be")) {
+            return safeName + ".mp3";
+        }
+        return safeName;
     }
 }

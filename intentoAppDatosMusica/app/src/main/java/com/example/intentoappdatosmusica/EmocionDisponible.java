@@ -41,24 +41,43 @@ public class EmocionDisponible implements Serializable, Seleccionable {
     }
 
     // Getters
-    public String getPalabra() { return palabra; }
-    public String getEmocionBase() { return emocionBase; }
-    public float getValence() { return valence; }
-    public float getArousal() { return arousal; }
-    public float getDominance() { return dominance; }
-    public String getNivelArousal() { return nivelArousal; }
+    public String getPalabra() {
+        return palabra;
+    }
+
+    public String getEmocionBase() {
+        return emocionBase;
+    }
+
+    public float getValence() {
+        return valence;
+    }
+
+    public float getArousal() {
+        return arousal;
+    }
+
+    public float getDominance() {
+        return dominance;
+    }
+
+    public String getNivelArousal() {
+        return nivelArousal;
+    }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
         EmocionDisponible that = (EmocionDisponible) obj;
         return this.palabra == that.palabra;
     }
 
     @Override
     public int hashCode() {
-        return Integer.hashCode(Integer.parseInt(palabra)); //TODO CAMBIAR INTEGER PARSE INT
+        return Integer.hashCode(Integer.parseInt(palabra)); // TODO CAMBIAR INTEGER PARSE INT
     }
 
     public static Map<String, EmocionDisponible> cargarEmociones(File csvFile) {
@@ -75,15 +94,16 @@ public class EmocionDisponible implements Serializable, Seleccionable {
             String linea;
             br.readLine(); // Saltar encabezado
             while ((linea = br.readLine()) != null) {
-                String[] partes = linea.split(",");
-                if (partes.length < 6) continue;
+                String[] partes = linea.replace("\"", "").split(",");
+                if (partes.length < 7)
+                    continue;
 
                 String palabra = partes[0].trim().toLowerCase(); // la palabra clave
-                String emocion = partes[1].trim();
-                float valence = Float.parseFloat(partes[2]);
-                float arousal = Float.parseFloat(partes[3]);
-                float dominance = Float.parseFloat(partes[4]);
-                String nivelArousal = partes[5].trim();
+                String emocion = partes[2].trim();
+                float valence = Float.parseFloat(partes[3]);
+                float arousal = Float.parseFloat(partes[4]);
+                float dominance = Float.parseFloat(partes[5]);
+                String nivelArousal = partes[6].trim();
 
                 EmocionDisponible data = new EmocionDisponible(emocion, valence, arousal, dominance, nivelArousal);
                 emocionesMap.put(palabra, data);

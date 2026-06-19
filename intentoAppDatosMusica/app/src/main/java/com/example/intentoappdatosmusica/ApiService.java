@@ -64,6 +64,13 @@ public interface ApiService {
             @Part("tiempo_fin") RequestBody tiempoFin);
 
     @Multipart
+    @POST("api/subir_audio_lote")
+    Call<List<AudioUploadResponse>> subirArchivosAudioLote(
+            @Part List<MultipartBody.Part> archivos,
+            @Part("usuario_id") RequestBody usuarioId,
+            @Part("metadatos") RequestBody metadatos);
+
+    @Multipart
     @POST("api/subir_enlace")
     Call<EnlaceUploadResponse> subirEnlace(
             @Part("usuario_id") RequestBody usuarioId,
@@ -92,7 +99,7 @@ public interface ApiService {
     @Multipart
     @POST("api/guardar_cancion_definitiva")
     Call<GuardarCancionResponse> guardarCancionDefinitivaArchivo(
-            @Part MultipartBody.Part archivo,
+            @Part("nombre_archivo") RequestBody archivo,
             @Part("usuario_id") RequestBody usuario_id,
             @Part("nombre") RequestBody nombre,
             @Part("autor") RequestBody autor,
@@ -118,6 +125,12 @@ public interface ApiService {
 
     @POST("api/sesion/delete")
     Call<Void> deleteSesion(@Body DeleteSesionRequest request);
+
+    @retrofit2.http.Streaming
+    @retrofit2.http.POST("api/exportar_informe")
+    Call<okhttp3.ResponseBody> exportarInforme(
+            @retrofit2.http.Header("Authorization") String token,
+            @retrofit2.http.Body ExportarRequest request);
 }
 
 class DeleteSesionRequest {
@@ -676,5 +689,17 @@ class UserNameUpdateRequest {
 
     public void setNewName(String newName) {
         this.newName = newName;
+    }
+}
+
+class ExportarRequest {
+    List<Integer> sesiones_ids;
+    String formato;
+    boolean plantilla_extendida;
+
+    public ExportarRequest(List<Integer> sesiones_ids, String formato, boolean plantilla_extendida) {
+        this.sesiones_ids = sesiones_ids;
+        this.formato = formato;
+        this.plantilla_extendida = plantilla_extendida;
     }
 }

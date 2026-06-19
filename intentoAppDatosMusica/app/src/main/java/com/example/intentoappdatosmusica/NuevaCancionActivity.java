@@ -6,13 +6,15 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -20,104 +22,201 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
+import android.os.Build;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
-import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 public class NuevaCancionActivity extends AppCompatActivity {
 
-    private EditText editTextLink;
-    private ImageButton btnConfirmar;
     private ImageView btnBack;
-    private ImageView btnSeleccionarArchivo; // Botón circular
-    private TextView textInstrucciones;
-
-    private String nombreArchivoSeleccionado = null;
+    private ImageButton btnConfirmar;
+    private TextView textIndicadorPagina;
+    private ViewPager2 viewPager;
 
     private static final int PICK_AUDIO_REQUEST = 1;
-    private Uri audioFileUri = null; // Para guardar temporalmente el archivo seleccionado
+    private int currentPickingPage = -1;
+
+    private List<SongUploadData> cancionesSeleccionadas;
+    private NuevaCancionAdapter adapter;
 
     private FrameLayout pantallaCarga;
     private ProgressBar progresoCarga;
     private TextView textoPorcentaje;
+    private List<String> rutasTemporalesCopiadas = new ArrayList<>();
+
+    private BroadcastReceiver uploadReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (AudioUploadService.ACTION_UPLOAD_SUCCESS.equals(action)) {
+                ArrayList<CancionPrediccion> cancionesProcesadas = 
+                    (ArrayList<CancionPrediccion>) intent.getSerializableExtra(AudioUploadService.EXTRA_PROCESSED_SONGS);
+                
+                Toast.makeText(NuevaCancionActivity.this, "Archivos procesados exitosamente", Toast.LENGTH_SHORT).show();
+
+                Intent nextIntent = new Intent(NuevaCancionActivity.this, DatosPrediccionActivity.class);
+                nextIntent.putExtra("canciones_procesadas", cancionesProcesadas);
+                nextIntent.putExtra("NC", true);
+
+                rutasTemporalesCopiadas.clear(); // Ya no son basura, son archivos definitivos
+                restaurarControles();
+                startActivityForResult(nextIntent, 200);
+            } else if (AudioUploadService.ACTION_UPLOAD_FAILURE.equals(action)) {
+                String error = intent.getStringExtra(AudioUploadService.EXTRA_ERROR_MESSAGE);
+                restaurarControles();
+                limpiarArchivosBasura();
+                Toast.makeText(NuevaCancionActivity.this, error != null ? error : "Error al procesar", Toast.LENGTH_LONG).show();
+            }
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(AudioUploadService.ACTION_UPLOAD_SUCCESS);
+        filter.addAction(AudioUploadService.ACTION_UPLOAD_FAILURE);
+        LocalBroadcastManager.getInstance(this).registerReceiver(uploadReceiver, filter);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(uploadReceiver);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_nueva_cancion);
 
-        editTextLink = findViewById(R.id.editTextEnlace);
-        btnConfirmar = findViewById(R.id.btnConfirmar);
         btnBack = findViewById(R.id.btnBack);
-        btnSeleccionarArchivo = findViewById(R.id.btnSeleccionarArchivo);
-        textInstrucciones = findViewById(R.id.textFormatos);
-
-        btnBack.setOnClickListener(v -> finish()); // Cierra esta actividad y vuelve a MenuPrincipal
-
-        btnSeleccionarArchivo.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("audio/*"); // Solo archivos de audio
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            startActivityForResult(intent, PICK_AUDIO_REQUEST);
-        });
-
+        btnConfirmar = findViewById(R.id.btnConfirmar);
+        textIndicadorPagina = findViewById(R.id.textIndicadorPagina);
+        viewPager = findViewById(R.id.viewPagerNuevaCancion);
         pantallaCarga = findViewById(R.id.pantallaCarga);
         progresoCarga = findViewById(R.id.progresoCarga);
         textoPorcentaje = findViewById(R.id.textoPorcentaje);
 
-        btnConfirmar.setOnClickListener(v -> {
-            String enlace = editTextLink.getText().toString().trim();
+        btnBack.setOnClickListener(v -> finish());
 
-            if (!enlace.isEmpty() && audioFileUri == null) {
-                // Subir enlace de YouTube
-                mostrarPantallaCarga();
-                subirEnlace(enlace);
-            } else if (enlace.isEmpty() && audioFileUri != null) {
-                Log.e("NUEVACANCIONACTIVITY", "Nombre del archivo seleccionado: " + nombreArchivoSeleccionado); //nombre archivo para ejemplo: Windows96 - 101Fitness (Cut-up Sections).wav
+        cancionesSeleccionadas = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            cancionesSeleccionadas.add(new SongUploadData());
+        }
 
-                // Obtener extensión del archivo
+        adapter = new NuevaCancionAdapter();
+        viewPager.setAdapter(adapter);
+
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                textIndicadorPagina.setText("Canción " + (position + 1) + " de 5");
+            }
+        });
+
+        btnConfirmar.setOnClickListener(v -> mostrarDialogoConfirmacion());
+    }
+
+    private void mostrarDialogoConfirmacion() {
+        List<SongUploadData> seleccionadas = new ArrayList<>();
+        for (SongUploadData data : cancionesSeleccionadas) {
+            if (data.getUri() != null) {
+                seleccionadas.add(data);
+            }
+        }
+
+        if (seleccionadas.isEmpty()) {
+            Toast.makeText(this, "No has seleccionado ninguna canción", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        StringBuilder mensaje = new StringBuilder();
+        for (SongUploadData data : seleccionadas) {
+            mensaje.append("• ").append(data.getNombreArchivo()).append("\n");
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Confirmar Selección")
+                .setMessage("Has seleccionado las siguientes canciones:\n\n" + mensaje.toString() + "\n¿Estás seguro de que deseas continuar?")
+                .setPositiveButton("Aceptar", (dialog, which) -> procesarArchivos(seleccionadas))
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    public void solicitarSeleccionArchivo(int position) {
+        currentPickingPage = position;
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("audio/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(intent, PICK_AUDIO_REQUEST);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == PICK_AUDIO_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            if (currentPickingPage != -1) {
+                Uri audioUri = data.getData();
+                String nombre = getFileNameFromUri(audioUri);
+                
+                // Obtener extensión del archivo para validarlo
                 String extension = "";
-                if (nombreArchivoSeleccionado != null && nombreArchivoSeleccionado.lastIndexOf('.') > 0) {
-                    extension = nombreArchivoSeleccionado.substring(nombreArchivoSeleccionado.lastIndexOf('.') + 1).toLowerCase();
+                if (nombre != null && nombre.lastIndexOf('.') > 0) {
+                    extension = nombre.substring(nombre.lastIndexOf('.') + 1).toLowerCase();
                 }
 
-                // Validar formatos permitidos
-                if (!extension.isEmpty() && (extension.equals("mp3") || extension.equals("wav") || extension.equals("ogg"))) {
-                    mostrarPantallaCarga();
-                    subirArchivo(audioFileUri);
+                if (!extension.isEmpty() && (extension.equals("mp3") || extension.equals("wav") || extension.equals("ogg") || extension.equals("m4a"))) {
+                    SongUploadData songData = cancionesSeleccionadas.get(currentPickingPage);
+                    songData.setUri(audioUri);
+                    songData.setNombreArchivo(nombre);
+                    
+                    adapter.notifyItemChanged(currentPickingPage);
                 } else {
                     Toast.makeText(this, "Formato de archivo no permitido. Use MP3, WAV u OGG", Toast.LENGTH_SHORT).show();
                 }
-            } else {
-                Toast.makeText(this, "No se permiten ambos al mismo tiempo, por favor seleccionar correctamente.", Toast.LENGTH_SHORT).show();
+                
+                currentPickingPage = -1;
             }
-        });
+        }
+        else if (requestCode == 200 && resultCode == RESULT_OK && data != null) {
+            setResult(RESULT_OK, data);
+            finish();
+        }
+        else if (requestCode == 200 && resultCode == RESULT_CANCELED) {
+            setResult(RESULT_CANCELED);
+            finish();
+        }
     }
 
     private void mostrarPantallaCarga() {
@@ -130,226 +229,76 @@ public class NuevaCancionActivity extends AppCompatActivity {
         pantallaCarga.setVisibility(View.GONE);
     }
 
-    private void subirEnlace(String enlace) {
-        long inicio = System.currentTimeMillis();
+    private void procesarArchivos(List<SongUploadData> seleccionadas) {
+        mostrarPantallaCarga();
         btnBack.setEnabled(false);
-        btnSeleccionarArchivo.setEnabled(false);
         btnConfirmar.setEnabled(false);
-        if (enlace == null || !esEnlaceYoutubeValido(enlace)) {
-            Toast.makeText(this, "Enlace no válido", Toast.LENGTH_SHORT).show();
-            btnBack.setEnabled(true);
-            btnSeleccionarArchivo.setEnabled(true);
-            btnConfirmar.setEnabled(true);
-            ocultarPantallaCarga();
-            return;
-        }
+        viewPager.setUserInputEnabled(false);
+
+        List<MultipartBody.Part> partesArchivos = new ArrayList<>();
+        JsonArray metadatosArray = new JsonArray();
 
         SharedPreferences prefs = getSharedPreferences("UsuarioPrefs", MODE_PRIVATE);
         int usuarioId = prefs.getInt("usuario_id", -1);
         if (usuarioId == -1) {
-            Toast.makeText(this, "Usuario no identificado", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        RequestBody usuarioIdBody = RequestBody.create(MediaType.parse("text/plain"), String.valueOf(usuarioId));
-        RequestBody enlaceBody = RequestBody.create(MediaType.parse("text/plain"), enlace);
-
-        ApiService audioService = ApiClient.getRetrofitForLargeTransfers().create(ApiService.class);
-        Call<EnlaceUploadResponse> call = audioService.subirEnlace(usuarioIdBody, enlaceBody);
-
-        call.enqueue(new Callback<EnlaceUploadResponse>() {
-            @Override
-            public void onResponse(Call<EnlaceUploadResponse> call, Response<EnlaceUploadResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    EnlaceUploadResponse res = response.body();
-                    int songId = res.getId();
-                    String nombre = res.getNombre();
-                    String autor = res.getAutor();
-                    String album = res.getAlbum();
-                    String duracion = res.getDuracion();
-
-                    List<Seccion> prediccionesSecciones = res.getSecciones();
-                    for (Seccion sec : prediccionesSecciones) {
-                        Log.d("API", "Sección: " + sec.getTiempoInicio() + "s - " + sec.getTiempoFinal() +
-                                " | V=" + sec.getValence() + ", A=" + sec.getArousal());
-                    }
-
-                    Toast.makeText(NuevaCancionActivity.this, "Enlace procesado exitosamente", Toast.LENGTH_SHORT).show();
-
-                    // ✅ Iniciar descarga del audio
-                    AudioRequest request = new AudioRequest(enlace);
-                    ApiService audioService = ApiClient.getRetrofitForLargeTransfers().create(ApiService.class);
-
-                    audioService.getAudio(request).enqueue(new Callback<ResponseBody>() {
-                        @Override
-                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> audioResponse) {
-                            if (audioResponse.isSuccessful() && audioResponse.body() != null) {
-                                File mediaDir = new File(getExternalFilesDir(null), "media");
-                                if (!mediaDir.exists()) mediaDir.mkdirs();
-
-                                InputStream inputStream = audioResponse.body().byteStream();
-                                File audioFile = new File(mediaDir, getYoutubeVideoId(enlace) + ".mp3");
-
-                                Runnable onSuccess = () -> {
-                                    Log.e("NUEVACANCION", "Descarga de enlace completada");
-
-                                    // Pequeña pausa para asegurar que el archivo esté completamente liberado
-                                    try {
-                                        Thread.sleep(100);
-                                    } catch (InterruptedException e) {
-                                        Thread.currentThread().interrupt();
-                                    }
-
-                                    Intent intent = new Intent(NuevaCancionActivity.this, DatosPrediccionActivity.class);
-                                    intent.putExtra("song_id", songId);
-                                    intent.putExtra("link", enlace);
-                                    intent.putExtra("name", nombre);
-                                    intent.putExtra("author", autor);
-                                    intent.putExtra("album", album);
-                                    intent.putExtra("duracion", duracion);
-                                    intent.putExtra("ruta_audio", audioFile.getAbsolutePath());
-                                    intent.putExtra("tipo_origen", "youtube");
-
-                                    intent.putExtra("secciones", (Serializable) prediccionesSecciones);
-
-                                    intent.putExtra("NC", true);
-
-                                    MediaPlayerList mediaPlayerList = MediaPlayerList.getInstance();
-                                    mediaPlayerList.removeMediaPlayer(songId);
-                                    mediaPlayerList.resetMediaPlayer(songId, audioFile.getAbsolutePath());
-
-                                    btnBack.setEnabled(true);
-                                    btnConfirmar.setEnabled(true);
-                                    btnSeleccionarArchivo.setEnabled(true);
-                                    ocultarPantallaCarga();
-                                    long fin = System.currentTimeMillis();
-                                    Log.d("ISO 25010", "Tiempo transcurrido: " + (fin - inicio) + " ms");
-                                    startActivityForResult(intent, 200);
-                                };
-
-                                Runnable onFailure = () -> {
-                                    Log.e("NUEVACANCION", "Error al guardar el archivo de audio");
-                                    Toast.makeText(NuevaCancionActivity.this, "Error al guardar el audio", Toast.LENGTH_SHORT).show();
-                                    ocultarPantallaCarga();
-                                    btnBack.setEnabled(true);
-                                    btnConfirmar.setEnabled(true);
-                                    btnSeleccionarArchivo.setEnabled(true);
-                                };
-
-                                new DescargarAudioDesdeEnlaceTask(inputStream, audioFile, onSuccess, onFailure).execute();
-
-                            } else {
-                                btnBack.setEnabled(true);
-                                btnConfirmar.setEnabled(true);
-                                btnSeleccionarArchivo.setEnabled(true);
-                                ocultarPantallaCarga();
-                                new AlertDialog.Builder(NuevaCancionActivity.this)
-                                        .setTitle("Sin conexión")
-                                        .setMessage("Para agregar una canción desde YouTube necesitas estar conectado a internet.")
-                                        .setPositiveButton("Aceptar", null)
-                                        .show();
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Call<ResponseBody> call, Throwable t) {
-                            btnBack.setEnabled(true);
-                            btnConfirmar.setEnabled(true);
-                            btnSeleccionarArchivo.setEnabled(true);
-                            ocultarPantallaCarga();
-                            Log.e("NUEVACANCION", "Falló la descarga de audio", t);
-                            Toast.makeText(NuevaCancionActivity.this, "Error de red al descargar audio", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                } else {
-                    Toast.makeText(NuevaCancionActivity.this, "Error: el enlace no es válido (no existe o tiene restricción de edad), por favor reintentar.", Toast.LENGTH_SHORT).show();
-                    btnBack.setEnabled(true);
-                    btnConfirmar.setEnabled(true);
-                    btnSeleccionarArchivo.setEnabled(true);
-                    ocultarPantallaCarga();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<EnlaceUploadResponse> call, Throwable t) {
-                btnBack.setEnabled(true);
-                btnConfirmar.setEnabled(true);
-                btnSeleccionarArchivo.setEnabled(true);
-                ocultarPantallaCarga();
-                Toast.makeText(NuevaCancionActivity.this, "Fallo de conexión", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private class DescargarAudioDesdeEnlaceTask extends AsyncTask<Void, Integer, Boolean> {
-        private InputStream inputStream;
-        private File outputFile;
-        private Runnable onSuccess;
-        private Runnable onFailure;
-
-        public DescargarAudioDesdeEnlaceTask(InputStream inputStream, File outputFile, Runnable onSuccess, Runnable onFailure) {
-            this.inputStream = inputStream;
-            this.outputFile = outputFile;
-            this.onSuccess = onSuccess;
-            this.onFailure = onFailure;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... voids) {
-            try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-
-                inputStream.close();
-                return true;
-            } catch (IOException e) {
-                Log.e("DESCARGA_ASYNC", "Error escribiendo el archivo", e);
-                return false;
-            }
-        }
-
-        @Override
-        protected void onPreExecute() {
-            progresoCarga.setIndeterminate(true); // siempre animado
-            textoPorcentaje.setText("Cargando...");
-        }
-
-        @Override
-        protected void onPostExecute(Boolean success) {
-            ocultarPantallaCarga();
-            if (success) {
-                onSuccess.run();
-            } else {
-                onFailure.run();
-            }
-        }
-    }
-
-    private void subirArchivo(Uri fileUri) {
-        long inicio = System.currentTimeMillis();
-        String rutaCopia = copyFileToAppMediaFolder(fileUri);
-        btnBack.setEnabled(false);
-        btnSeleccionarArchivo.setEnabled(false);
-        btnConfirmar.setEnabled(false);
-        if (rutaCopia == null) {
-            Toast.makeText(this, "Error al copiar el archivo", Toast.LENGTH_SHORT).show();
-            btnBack.setEnabled(true);
-            btnSeleccionarArchivo.setEnabled(true);
-            btnConfirmar.setEnabled(true);
+            Toast.makeText(this, "Error: Usuario no identificado", Toast.LENGTH_SHORT).show();
             ocultarPantallaCarga();
             return;
         }
 
-        File file = new File(rutaCopia);
+        for (SongUploadData songData : seleccionadas) {
+            String rutaCopia = copyFileToAppMediaFolder(songData.getUri());
+            if (rutaCopia == null) {
+                Toast.makeText(this, "Error al copiar " + songData.getNombreArchivo(), Toast.LENGTH_SHORT).show();
+                continue;
+            }
 
+            File file = new File(rutaCopia);
+            String formattedTime = obtenerDuracionFormateada(file.getAbsolutePath());
+
+            // Crear MultipartBody.Part para el archivo
+            RequestBody requestFile = RequestBody.create(MediaType.parse("audio/*"), file);
+            MultipartBody.Part body = MultipartBody.Part.createFormData("archivos", file.getName(), requestFile);
+            partesArchivos.add(body);
+
+            // Crear objeto de metadatos
+            JsonObject meta = new JsonObject();
+            meta.addProperty("nombre_archivo", file.getName());
+            meta.addProperty("enlace", songData.getEnlace());
+            meta.addProperty("tiempo_fin", formattedTime);
+            meta.addProperty("ruta_audio_local", rutaCopia);
+            metadatosArray.add(meta);
+        }
+
+        if (partesArchivos.isEmpty()) {
+            Toast.makeText(this, "Ningún archivo pudo ser procesado", Toast.LENGTH_SHORT).show();
+            restaurarControles();
+            return;
+        }
+
+        Intent serviceIntent = new Intent(this, AudioUploadService.class);
+        serviceIntent.putExtra("usuarioId", usuarioId);
+        serviceIntent.putExtra("metadatos", metadatosArray.toString());
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+    }
+
+    private void restaurarControles() {
+        ocultarPantallaCarga();
+        btnBack.setEnabled(true);
+        btnConfirmar.setEnabled(true);
+        viewPager.setUserInputEnabled(true);
+    }
+
+    private String obtenerDuracionFormateada(String filePath) {
         MediaPlayer mediaPlayer = new MediaPlayer();
-        String formattedTime;
+        String formattedTime = "00:00:00.000";
         try {
-            mediaPlayer.setDataSource(String.valueOf(file));
+            mediaPlayer.setDataSource(filePath);
             mediaPlayer.prepare();
             int durationInMillis = mediaPlayer.getDuration();
 
@@ -358,311 +307,18 @@ public class NuevaCancionActivity extends AppCompatActivity {
             int seconds = (durationInMillis / 1000) % 60;
             int milliseconds = durationInMillis % 1000;
 
-            formattedTime = String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
-            Log.e("NUEVA CANCION", "la canción nueva dura: " + formattedTime);
-
+            formattedTime = String.format(Locale.US, "%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         } finally {
             mediaPlayer.release();
         }
-
-        RequestBody requestFile = RequestBody.create(MediaType.parse("audio/*"), file);
-        MultipartBody.Part body = MultipartBody.Part.createFormData("archivo", file.getName(), requestFile);
-
-        SharedPreferences prefs = getSharedPreferences("UsuarioPrefs", MODE_PRIVATE);
-        int usuarioId = prefs.getInt("usuario_id", -1);
-        if (usuarioId == -1) {
-            Toast.makeText(this, "Error: Usuario no identificado", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        RequestBody usuarioIdBody = RequestBody.create(MediaType.parse("text/plain"), String.valueOf(usuarioId));
-        RequestBody nombreCancionBody = RequestBody.create(MediaType.parse("text/plain"), nombreArchivoSeleccionado);
-        RequestBody finSeccionBody = RequestBody.create(MediaType.parse("text/plain"), formattedTime);
-
-        String nombreSinExtension = nombreArchivoSeleccionado.replaceFirst("[.][^.]+$", "");
-
-        ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
-        Call<AudioUploadResponse> call = apiService.subirArchivoAudio(body, usuarioIdBody, nombreCancionBody, finSeccionBody);
-
-        call.enqueue(new Callback<AudioUploadResponse>() {
-            @Override
-            public void onResponse(Call<AudioUploadResponse> call, Response<AudioUploadResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    AudioUploadResponse res = response.body();
-                    int songId = res.getId();
-
-                    // 🔹 NUEVOS CAMPOS - Predicciones de la red neuronal
-                    String nombre = res.getNombre();
-                    String duracion = res.getDuracion();
-                    double valence = res.getValence();
-                    double arousal = res.getArousal();
-                    boolean esTemporal = res.isTemporal();
-
-                    Toast.makeText(NuevaCancionActivity.this, "Archivo procesado exitosamente", Toast.LENGTH_SHORT).show();
-
-                    // Pequeña pausa para asegurar que el archivo esté completamente liberado
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-
-                    // 🔹 Convertir las secciones predichas a objetos Seccion
-                    List<Seccion> seccionesPredichas = new ArrayList<>();
-                    if (res.getSecciones() != null && !res.getSecciones().isEmpty()) {
-                        for (Seccion s : res.getSecciones()) {
-                            // convertir tiempos de double a String si vienen así del servidor
-                            String inicioStr, finStr;
-
-                            try {
-                                // Si el servidor envía "tiempo_inicio": 12.34 (double)
-                                double inicioDouble = Double.parseDouble(s.getTiempoInicio());
-                                double finDouble = Double.parseDouble(s.getTiempoFinal());
-                                inicioStr = String.valueOf(s.getTiempoInicio());
-                                finStr = String.valueOf(s.getTiempoFinal());
-
-                            } catch (NumberFormatException e) {
-                                // Si ya vienen como texto (por ejemplo "00:00:12.340")
-                                inicioStr = s.getTiempoInicio();
-                                finStr = s.getTiempoFinal();
-                            }
-
-                            Seccion nuevaSeccion = new Seccion(
-                                    -1,
-                                    inicioStr,
-                                    finStr,
-                                    "", ""
-                            );
-                            nuevaSeccion.setValence(s.getValence());
-                            nuevaSeccion.setArousal(s.getArousal());
-                            seccionesPredichas.add(nuevaSeccion);
-                        }
-
-                    } else {
-                        // Fallback si no hay secciones
-                        seccionesPredichas.add(new Seccion(-1, "00:00.000", duracion, "", ""));
-                    }
-
-                    MediaPlayerList mediaPlayerList = MediaPlayerList.getInstance();
-                    mediaPlayerList.resetMediaPlayer(songId, rutaCopia);
-
-                    Intent intent = new Intent(NuevaCancionActivity.this, DatosPrediccionActivity.class);
-                    intent.putExtra("song_id", songId);
-                    intent.putExtra("link", nombreArchivoSeleccionado);
-                    intent.putExtra("name", nombre != null ? nombre : nombreSinExtension);
-                    intent.putExtra("ruta_audio", rutaCopia);
-                    intent.putExtra("duracion", duracion != null ? duracion : formattedTime);
-                    intent.putExtra("tipo_origen", "archivo");
-                    intent.putExtra("author", "(Sin autor)");
-                    intent.putExtra("album", "(Sin álbum)");
-
-                    // 🔹 Agregar las secciones predichas al intent
-                    intent.putExtra("secciones", (Serializable) seccionesPredichas);
-                    intent.putExtra("es_temporal", esTemporal);
-
-                    intent.putExtra("NC", true);
-
-                    Log.e("NUEVA CANCION ACT", "canción procesada: " + true);
-                    ocultarPantallaCarga();
-                    btnBack.setEnabled(true);
-                    btnConfirmar.setEnabled(true);
-                    btnSeleccionarArchivo.setEnabled(true);
-                    long fin = System.currentTimeMillis();
-                    Log.d("ISO 25010", "Tiempo transcurrido: " + (fin - inicio) + " ms");
-                    startActivityForResult(intent, 200);
-                } else {
-                    ocultarPantallaCarga();
-                    btnBack.setEnabled(true);
-                    btnConfirmar.setEnabled(true);
-                    btnSeleccionarArchivo.setEnabled(true);
-                    Toast.makeText(NuevaCancionActivity.this, "Error al procesar el archivo", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<AudioUploadResponse> call, Throwable t) {
-                Toast.makeText(NuevaCancionActivity.this, "Sin conexión: procesando localmente", Toast.LENGTH_LONG).show();
-                Log.e("onFailure", t.getMessage());
-
-                SharedPreferences prefs = getSharedPreferences("UsuarioPrefs", MODE_PRIVATE);
-                int usuarioId = prefs.getInt("usuario_id", -1);
-                if (usuarioId == -1) {
-                    Toast.makeText(NuevaCancionActivity.this, "Error: Usuario no identificado", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                int nuevoId = obtenerNuevoIdLocal();
-
-                MediaPlayerList.getInstance().resetMediaPlayer(nuevoId, rutaCopia);
-
-                // Modo offline - usar valores por defecto para predicciones
-                Intent intent = new Intent(NuevaCancionActivity.this, DatosPrediccionActivity.class);
-                intent.putExtra("song_id", nuevoId);
-                intent.putExtra("link", nombreArchivoSeleccionado);
-                intent.putExtra("name", nombreSinExtension);
-                intent.putExtra("ruta_audio", rutaCopia);
-                intent.putExtra("duracion", formattedTime);
-                intent.putExtra("tipo_origen", "archivo_local");
-                intent.putExtra("offline", true);
-
-                // 🔹 VALORES POR DEFECTO PARA MODO OFFLINE
-                intent.putExtra("valence", 0); // Valor neutral
-                intent.putExtra("arousal", 0); // Valor neutral
-                intent.putExtra("es_temporal", true);
-
-                ocultarPantallaCarga();
-                btnBack.setEnabled(true);
-                btnConfirmar.setEnabled(true);
-                btnSeleccionarArchivo.setEnabled(true);
-                startActivityForResult(intent, 200);
-            }
-        });
-    }
-
-    private String convertirSegundosATiempo(double segundos) {
-        int millis = (int) (segundos * 1000);
-        int hours = (millis / (1000 * 60 * 60)) % 24;
-        int minutes = (millis / (1000 * 60)) % 60;
-        int seconds = (millis / 1000) % 60;
-        int ms = millis % 1000;
-        return String.format("%02d:%02d:%02d.%03d", hours, minutes, seconds, ms);
-    }
-
-    private void guardarCancionLocalmente(int nuevo_Id, String nombreArchivoOriginal, String nombreSinExtension,
-                                          String duracion, String f_creacion, String f_ultimaedicion,
-                                          int nuevo_Id_seccion, String f_creacionseccion, String f_ultimaedicionseccion) {
-        try {
-            File directorio = new File(getExternalFilesDir(null), "songdata");
-            if (!directorio.exists()) directorio.mkdirs();
-
-            // 🔹 Obtener usuario_id desde SharedPreferences
-            SharedPreferences prefs = getSharedPreferences("UsuarioPrefs", MODE_PRIVATE);
-            int usuarioId = prefs.getInt("usuario_id", -1);
-            if (usuarioId == -1) {
-                Log.e("LOCAL_SAVE", "❌ No se encontró usuario_id en SharedPreferences. No se puede guardar canción.");
-                return;
-            }
-
-            // 🔹 Archivo único por usuario
-            File archivo = new File(directorio, "songdata_" + usuarioId + ".txt");
-
-            // Preparar campos
-            String nombre = nombreSinExtension;
-            String autor = "(Sin autor)";
-            String album = "(Sin álbum)";
-            String enlace = nombreArchivoOriginal; // incluye .mp3, .wav, etc.
-            String comentario = "(Sin comentario)";
-            String estadoComentario = "false";
-            String estadoPublicado = "false";
-            String fecha_creacion = f_creacion;
-            String fecha_ultimaedicion = f_ultimaedicion;
-            String secciones = "00:00.000-" + duracion.substring(3); // quitar HH: y dejar MM:ss.dcm
-            String fecha_creacion_seccion = f_creacionseccion;
-            String fecha_ultimaedicion_seccion = f_ultimaedicionseccion;
-
-            // Armar la línea
-            String nuevaLinea = nuevo_Id + ";" + nombre + ";" + autor + ";" + album + ";" +
-                    enlace + ";" + comentario + ";" + estadoComentario + ";" + estadoPublicado + ";" +
-                    fecha_creacion + ";" + fecha_ultimaedicion + ";" +
-                    nuevo_Id_seccion + "/" + secciones + "//" + fecha_creacion_seccion + "//" + fecha_ultimaedicion_seccion;
-
-            // Escribir (agregar al final)
-            FileWriter fw = new FileWriter(archivo, true);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(nuevaLinea);
-            bw.newLine();
-            bw.close();
-
-            Toast.makeText(this, "Archivo 'songdata_" + usuarioId + ".txt' actualizado.", Toast.LENGTH_SHORT).show();
-            Log.e("NUEVALINEA", nuevaLinea);
-
-        } catch (IOException e) {
-            Log.e("LOCAL_SAVE", "❌ Error al guardar canción localmente", e);
-            Toast.makeText(this, "Error al guardar localmente", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private int obtenerNuevoIdLocal() {
-        File directorio = new File(getExternalFilesDir(null), "songdata");
-
-        // 🔹 Obtener usuario_id
-        SharedPreferences prefs = getSharedPreferences("UsuarioPrefs", MODE_PRIVATE);
-        int usuarioId = prefs.getInt("usuario_id", -1);
-        if (usuarioId == -1) {
-            Log.e("LOCAL_ID", "❌ No se encontró usuario_id en SharedPreferences.");
-            return 1; // valor por defecto
-        }
-
-        File archivo = new File(directorio, "songdata_" + usuarioId + ".txt");
-
-        int nuevoId = 1;
-        if (archivo.exists()) {
-            try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
-                String linea;
-                while ((linea = br.readLine()) != null) {
-                    String[] partes = linea.split(";");
-                    if (partes.length > 0) {
-                        try {
-                            int id = Integer.parseInt(partes[0]);
-                            if (id >= nuevoId) nuevoId = id + 1;
-                        } catch (NumberFormatException ignored) {}
-                    }
-                }
-            } catch (IOException e) {
-                Log.e("LOCAL_ID", "❌ Error leyendo archivo para ID local", e);
-            }
-        }
-        return nuevoId;
-    }
-
-    private int obtenerNuevoIdSeccionLocal() {
-        File directorio = new File(getExternalFilesDir(null), "songdata");
-
-        // 🔹 Obtener usuario_id
-        SharedPreferences prefs = getSharedPreferences("UsuarioPrefs", MODE_PRIVATE);
-        int usuarioId = prefs.getInt("usuario_id", -1);
-        if (usuarioId == -1) {
-            Log.e("LOCAL_ID_SECCION", "❌ No se encontró usuario_id en SharedPreferences.");
-            return 1; // valor por defecto
-        }
-
-        File archivo = new File(directorio, "songdata_" + usuarioId + ".txt");
-
-        int nuevoId = 1;
-        if (archivo.exists()) {
-            try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
-                String linea;
-                while ((linea = br.readLine()) != null) {
-                    String[] partesCancion = linea.split(";");
-                    if (partesCancion.length >= 11) {
-                        String secciones = partesCancion[10];  // Campo 11: secciones
-                        String[] seccionesArray = secciones.split("\\|");
-
-                        for (String seccion : seccionesArray) {
-                            String[] partesSeccion = seccion.split("/");
-                            if (partesSeccion.length > 0) {
-                                try {
-                                    int idSeccion = Integer.parseInt(partesSeccion[0]);
-                                    if (idSeccion >= nuevoId) {
-                                        nuevoId = idSeccion + 1;
-                                    }
-                                } catch (NumberFormatException ignored) {}
-                            }
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                Log.e("LOCAL_ID_SECCION", "❌ Error leyendo archivo para ID de sección local", e);
-            }
-        }
-        return nuevoId;
+        return formattedTime;
     }
 
     private String copyFileToAppMediaFolder(Uri uri) {
         String nombreArchivo = getFileNameFromUri(uri);
-        File mediaDir = new File(getExternalFilesDir("media"), ""); // Ruta: /storage/emulated/0/Android/data/tu.app/files/media
+        File mediaDir = new File(getExternalFilesDir("media"), "");
 
         if (!mediaDir.exists()) {
             mediaDir.mkdirs();
@@ -679,7 +335,9 @@ public class NuevaCancionActivity extends AppCompatActivity {
                 outputStream.write(buffer, 0, bytesRead);
             }
 
-            return destino.getAbsolutePath();
+            String rutaCopia = destino.getAbsolutePath();
+            rutasTemporalesCopiadas.add(rutaCopia);
+            return rutaCopia;
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -687,62 +345,8 @@ public class NuevaCancionActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        // ✅ Caso 1: selección de archivo de audio
-        if (requestCode == PICK_AUDIO_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            audioFileUri = data.getData(); // Guardamos la URI del archivo de audio
-
-            // Obtener información del archivo
-            nombreArchivoSeleccionado = getFileNameFromUri(audioFileUri);
-            String rutaReal = getRealPathFromUri(audioFileUri);
-
-            Log.d("NUEVACANCIONACTIVITY", "Archivo seleccionado - Nombre: " + nombreArchivoSeleccionado + ", Ruta: " + rutaReal);
-
-            if (nombreArchivoSeleccionado != null && !nombreArchivoSeleccionado.isEmpty()) {
-                textInstrucciones.setText(nombreArchivoSeleccionado);
-            } else {
-                textInstrucciones.setText("Archivo seleccionado");
-            }
-
-            btnSeleccionarArchivo.setBackgroundResource(R.drawable.nota_musical);
-            Toast.makeText(this, "Archivo de audio seleccionado", Toast.LENGTH_SHORT).show();
-        }
-
-        // ✅ Caso 2: resultado desde DatosMusicalesActivity
-        else if (requestCode == 200 && resultCode == RESULT_OK && data != null) {
-            boolean cancionNuevaAgregada = data.getBooleanExtra("NC", false);
-            Log.e("NUEVA CANCION", "Resultado recibido de DatosMusicalesActivity: NC = " + cancionNuevaAgregada);
-            setResult(RESULT_OK, data); // Reenviar resultado a MenuPrincipalActivity
-            finish(); // Cierra NuevaCancionActivity
-        }
-
-        else if (requestCode == 200) {
-            if (resultCode == RESULT_OK) {
-                // El usuario confirmó en DatosPrediccionActivity
-                boolean cancionConfirmada = data.getBooleanExtra("cancion_confirmada", false);
-                if (cancionConfirmada) {
-                    // Reenviar a MenuPrincipal con éxito
-                    setResult(RESULT_OK, data);
-                } else {
-                    // El usuario canceló
-                    setResult(RESULT_CANCELED);
-                }
-                finish();
-            } else if (resultCode == RESULT_CANCELED) {
-                // El usuario canceló desde DatosPrediccionActivity
-                setResult(RESULT_CANCELED);
-                finish();
-            }
-        }
-    }
-
     private String getFileNameFromUri(Uri uri) {
         String nombre = null;
-
-        // Obtener nombre del archivo
         if ("content".equals(uri.getScheme())) {
             try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
                 if (cursor != null && cursor.moveToFirst()) {
@@ -753,38 +357,14 @@ public class NuevaCancionActivity extends AppCompatActivity {
                 }
             }
         }
-
         if (nombre == null) {
             nombre = uri.getLastPathSegment();
         }
-
         return nombre;
-    }
-
-    private boolean esEnlaceYoutubeValido(String enlace) {
-        return getYoutubeVideoId(enlace) != null;
-    }
-
-    private String getYoutubeVideoId(String youtubeUrl) {
-        if (youtubeUrl == null || youtubeUrl.isEmpty()) return null;
-
-        Pattern pattern = Pattern.compile("v=([a-zA-Z0-9_-]{11})|/videos/([a-zA-Z0-9_-]{11})|embed/([a-zA-Z0-9_-]{11})|youtu\\.be/([a-zA-Z0-9_-]{11})|/v/([a-zA-Z0-9_-]{11})|/e/([a-zA-Z0-9_-]{11})|watch\\?v=([a-zA-Z0-9_-]{11})|/shorts/([a-zA-Z0-9_-]{11})|/live/([a-zA-Z0-9_-]{11})");
-        Matcher matcher = pattern.matcher(youtubeUrl);
-
-        if (matcher.find()) {
-            for (int i = 1; i <= matcher.groupCount(); i++) {
-                if (matcher.group(i) != null) {
-                    return matcher.group(i);
-                }
-            }
-        }
-
-        return null;
     }
 
     private String getRealPathFromUri(Uri uri) {
         String realPath = null;
-
         if ("content".equalsIgnoreCase(uri.getScheme())) {
             String[] projection = {MediaStore.Audio.Media.DATA};
             try (Cursor cursor = getContentResolver().query(uri, projection, null, null, null)) {
@@ -806,7 +386,93 @@ public class NuevaCancionActivity extends AppCompatActivity {
                 return realPath;
             }
         }
+        return null;
+    }
 
-        return null; // No copiar aquí
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (isFinishing()) {
+            limpiarArchivosBasura();
+        }
+    }
+
+    private void limpiarArchivosBasura() {
+        for (String ruta : rutasTemporalesCopiadas) {
+            File file = new File(ruta);
+            if (file.exists()) {
+                file.delete();
+                Log.d("Limpieza", "Archivo huérfano eliminado: " + ruta);
+            }
+        }
+        rutasTemporalesCopiadas.clear();
+    }
+
+    private class NuevaCancionAdapter extends RecyclerView.Adapter<NuevaCancionAdapter.ViewHolder> {
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.fragment_nueva_cancion, parent, false);
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            SongUploadData data = cancionesSeleccionadas.get(position);
+
+            if (data.getUri() != null && data.getNombreArchivo() != null) {
+                holder.textInstrucciones.setText(data.getNombreArchivo());
+                holder.btnSeleccionarArchivo.setBackgroundResource(R.drawable.nota_musical);
+            } else {
+                holder.textInstrucciones.setText("Toca este ícono para agregar el audio");
+                holder.btnSeleccionarArchivo.setBackgroundResource(android.R.color.transparent);
+            }
+
+            // Remove existing textwatcher to prevent updating the wrong model when views are recycled
+            if (holder.textWatcher != null) {
+                holder.editTextEnlace.removeTextChangedListener(holder.textWatcher);
+            }
+
+            holder.editTextEnlace.setText(data.getEnlace());
+
+            holder.textWatcher = new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    data.setEnlace(s.toString());
+                }
+            };
+            holder.editTextEnlace.addTextChangedListener(holder.textWatcher);
+
+            holder.layoutArchivo.setOnClickListener(v -> solicitarSeleccionArchivo(holder.getAdapterPosition()));
+            holder.btnSeleccionarArchivo.setOnClickListener(v -> solicitarSeleccionArchivo(holder.getAdapterPosition()));
+        }
+
+        @Override
+        public int getItemCount() {
+            return cancionesSeleccionadas.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            View layoutArchivo;
+            ImageButton btnSeleccionarArchivo;
+            TextView textInstrucciones;
+            EditText editTextEnlace;
+            TextWatcher textWatcher;
+
+            ViewHolder(View itemView) {
+                super(itemView);
+                layoutArchivo = itemView.findViewById(R.id.layoutArchivo);
+                btnSeleccionarArchivo = itemView.findViewById(R.id.btnSeleccionarArchivo);
+                textInstrucciones = itemView.findViewById(R.id.textArchivo);
+                editTextEnlace = itemView.findViewById(R.id.editTextEnlace);
+            }
+        }
     }
 }

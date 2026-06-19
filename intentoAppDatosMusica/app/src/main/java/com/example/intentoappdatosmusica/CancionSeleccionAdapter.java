@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -55,6 +53,16 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
     private Map<String, EmocionDisponible> emocionesMap;
 
     private boolean soloSeleccionados = false;
+
+    public interface OnLinkSongListener {
+        void onLinkSong(Song song);
+    }
+
+    private OnLinkSongListener linkSongListener;
+
+    public void setOnLinkSongListener(OnLinkSongListener listener) {
+        this.linkSongListener = listener;
+    }
 
     public void setSoloSeleccionados(boolean solo) {
         soloSeleccionados = solo;
@@ -186,19 +194,13 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
             holder.cardContainer.setStrokeColor(colorBordeInicial);
 
             // Verificar si el archivo existe
-            String fileName = getFilePath(song.getEnlace());
-            String filePath;
-            if (fileName == null) {
-                filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + song.getEnlace();
-            } else {
-                filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + fileName + ".mp3";
-            }
+            String filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + song.getSafeFileName();
 
             File audioFileCheck = new File(filePath);
             boolean fileIsValid = esAudioValido(audioFileCheck);
 
             if (!fileIsValid) {
-                audioFileCheck.delete();
+                // Se retira comprobación destructiva en pos del enfoque BYOM
             }
 
             song.setLoaded(fileIsValid);
@@ -208,9 +210,8 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
 
             boolean estaDescargada = song.isLoaded();
 
-            if (mediaPlayerList.isDownloading(song.getId())) {
-                holder.btnPlayPause.setImageResource(R.drawable.iconolocked);
-            } else if (!estaDescargada) {
+            if (!estaDescargada) {
+                // Se utiliza el icono de descargas (que ahora indica vinculación local)
                 holder.btnPlayPause.setImageResource(R.drawable.iconodescargar);
             } else if (mediaPlayerList.isPlaying(song.getId())) {
                 holder.btnPlayPause.setImageResource(R.drawable.iconopause);
@@ -225,33 +226,8 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
                 holder.checkBox.setChecked(!holder.checkBox.isChecked());
             });
 
-            // Detectar descargas en tiempo real
-            int expectedId = song.getId();
-
-            if (context instanceof LifecycleOwner) {
-                MediaPlayerList.getInstance().getDownloadingStateLiveData().observe((LifecycleOwner) context, downloadingMap -> {
-                    int positionInAdapter = holder.getAdapterPosition();
-                    if (positionInAdapter == RecyclerView.NO_POSITION || positionInAdapter >= getItemCount()) return;
-
-                    Song currentSong = songList.get(positionInAdapter);
-                    if (currentSong.getId() != expectedId) return;
-
-                    boolean isDownloading = MediaPlayerList.getInstance().isAnySongDownloading();
-                    boolean shouldBeLocked = isDownloading && !currentSong.isLoaded();
-                    holder.btnPlayPause.setEnabled(!shouldBeLocked);
-
-                    if (shouldBeLocked) {
-                        holder.btnPlayPause.setImageResource(R.drawable.iconolocked);
-                    } else if (!currentSong.isLoaded()) {
-                        holder.btnPlayPause.setImageResource(R.drawable.iconodescargar);
-                    } else if (mediaPlayerList.isPlaying(currentSong.getId())) {
-                        holder.btnPlayPause.setImageResource(R.drawable.iconopause);
-                    } else {
-                        holder.btnPlayPause.setImageResource(R.drawable.iconoplay);
-                    }
-                });
-            }
-
+            // Se elimina bloque de descargas al migrar a BYOM estricto
+            
             MediaPlayer mediaPlayer;
             if (fileIsValid) {
                 mediaPlayer = mediaPlayerList.getMediaPlayer(song.getId(), filePath);
@@ -261,7 +237,7 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
     }
 
     private void metodoExtra(MediaPlayer mediaPlayer, MediaPlayerList mediaPlayerList, SongSelectionViewHolder holder, Song song) {
-        File archivo = new File(context.getExternalFilesDir("media"), getFilePath(song.getEnlace()) == null ? song.getEnlace() : getFilePath(song.getEnlace()) + ".mp3");
+        File archivo = new File(context.getExternalFilesDir("media"), song.getSafeFileName());
         if (mediaPlayer == null || !archivo.exists()) {
             if (holder.handler != null && holder.updateSeekBarRunnable != null) {
                 holder.handler.removeCallbacks(holder.updateSeekBarRunnable);
@@ -328,9 +304,11 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
                     if (!holder.tvSongDuration.getText().toString().equals(nuevoTexto)) {
                         holder.tvSongDuration.setText(nuevoTexto); // ✅ Solo actualiza si es distinto
                     }
+                    holder.btnPlayPause.setImageResource(R.drawable.iconopause);
+                    holder.handler.postDelayed(this, 100);
+                } else {
+                    holder.btnPlayPause.setImageResource(R.drawable.iconoplay);
                 }
-
-                holder.handler.postDelayed(this, 100);
             }
         };
         holder.handler.post(holder.updateSeekBarRunnable);
@@ -361,80 +339,20 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
     private void manejarReproduccion(Song song, int songIndex, SongSelectionViewHolder holder) {
         MediaPlayerList mediaPlayerList = MediaPlayerList.getInstance();
 
-        String fileName = getFilePath(song.getEnlace());
-        String filePath;
-        if (fileName == null) {
-            filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + song.getEnlace();
-        } else {
-            filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + fileName + ".mp3";
-        }
+        String filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/" + song.getSafeFileName();
 
         File audioFile = new File(filePath);
         if (!audioFile.exists()) {
-            if (!mediaPlayerList.isDownloading(song.getId())) {
-                mediaPlayerList.setDownloading(song.getId(), true);
-                // ✅ ACTUALIZAR: Notificar a todas las canciones que están bloqueadas
-                MediaPlayerList.getInstance().notifySongStateChanged(song.getId());
-                //mediaPlayerList.updateButtonState(holder.btnPlayPause, song.getId());
-                holder.btnPlayPause.setImageResource(R.drawable.iconodescargar);
-                Toast.makeText(context, "Descargando " + song.getNombre() + ", por favor espere.", Toast.LENGTH_SHORT).show();
-
-                if (fileName == null) {
-                    ArchivoRequest request = new ArchivoRequest(song.getId());
-                    audioService.getArchivo(request).enqueue(new Callback<ResponseBody>() {
-                        @Override
-                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                            if (response.isSuccessful() && response.body() != null) {
-                                File directory = new File(context.getExternalFilesDir(null), "media");
-                                if (!directory.exists()) directory.mkdirs();
-                                File archivoDestino = new File(directory, song.getEnlace());
-                                new DownloadAudioTask(response.body().byteStream(), archivoDestino, song, holder, songIndex, mediaPlayerList).execute();
-                            } else {
-                                Log.e("API_ERROR", "No se pudo obtener el archivo subido");
-                                mediaPlayerList.setDownloading(song.getId(), false);
-                                mediaPlayerList.updateButtonState(holder.btnPlayPause, song.getId());
-                            }
+            new android.app.AlertDialog.Builder(context)
+                    .setTitle("Archivo no encontrado")
+                    .setMessage("El archivo de audio relacionado a esta canción no se encuentra en el dispositivo. ¿Deseas vincular un MP3 local nuevamente?")
+                    .setPositiveButton("Vincular", (dialog, which) -> {
+                        if (linkSongListener != null) {
+                            linkSongListener.onLinkSong(song);
                         }
-
-                        @Override
-                        public void onFailure(Call<ResponseBody> call, Throwable t) {
-                            Log.e("API_ERROR", "Error en getArchivo", t);
-                            mediaPlayerList.setDownloading(song.getId(), false);
-                            mediaPlayerList.updateButtonState(holder.btnPlayPause, song.getId());
-                        }
-                    });
-                } else {
-                    AudioRequest request = new AudioRequest(song.getEnlace());
-                    audioService.getAudio(request).enqueue(new Callback<ResponseBody>() {
-                        @Override
-                        public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                            if (response.isSuccessful() && response.body() != null) {
-                                try {
-                                    File directory = new File(context.getExternalFilesDir(null), "media");
-                                    if (!directory.exists()) {
-                                        directory.mkdirs();
-                                    }
-                                    File audioFile = new File(directory, getFilePath(song.getEnlace()) + ".mp3");
-                                    new DownloadAudioTask(response.body().byteStream(), audioFile, song, holder, songIndex, mediaPlayerList).execute();
-                                } catch (Exception e) {
-                                    Log.e("AUDIO_STREAM", "Error al iniciar la descarga", e);
-                                }
-                            } else {
-                                Log.e("API_ERROR", "Error al obtener URL del audio: " + response.message());
-                                mediaPlayerList.setDownloading(song.getId(), false);
-                                mediaPlayerList.updateButtonState(holder.btnPlayPause, song.getId());
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Call<ResponseBody> call, Throwable t) {
-                            Log.e("API_ERROR", "Falló la llamada a getAudio", t);
-                            mediaPlayerList.setDownloading(song.getId(), false);
-                            mediaPlayerList.updateButtonState(holder.btnPlayPause, song.getId());
-                        }
-                    });
-                }
-            }
+                    })
+                    .setNegativeButton("Cancelar", null)
+                    .show();
             return;
         }
 
@@ -452,15 +370,8 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
                 }
 
                 int previousIndex = currentlyPlayingPosition;
-                String previousLink = songList.get(previousIndex).getEnlace();
-                String previousFilePath;
-
-                String fileNameMR = getFilePath(previousLink);
-                if (fileNameMR == null) {
-                    previousFilePath = context.getExternalFilesDir("media") + "/" + previousLink;
-                } else {
-                    previousFilePath = context.getExternalFilesDir("media") + "/" + fileNameMR + ".mp3";
-                }
+                String previousLink = songList.get(previousIndex).getSafeFileName();
+                String previousFilePath = context.getExternalFilesDir("media") + "/" + previousLink;
 
                 if (new File(previousFilePath).exists()) {
                     mediaPlayerList.pause(songList.get(previousIndex).getId());
@@ -477,95 +388,10 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
             mediaPlayerList.play(song.getId());
             currentlyPlayingPosition = songIndex;
             holder.btnPlayPause.setImageResource(R.drawable.iconopause);
-
-            mediaPlayerList.setOnCompletionListener(song.getId(), mp -> {
-                currentlyPlayingPosition = -1;
-                holder.btnPlayPause.setImageResource(R.drawable.iconoplay);
-            });
         }
     }
 
-    private class DownloadAudioTask extends AsyncTask<Void, Void, Boolean> {
-        private InputStream inputStream;
-        private File audioFile;
-        private Song song;
-        private SongSelectionViewHolder holder;
-        private int position;
-        private MediaPlayerList mediaPlayerList;
-
-        public DownloadAudioTask(InputStream inputStream, File audioFile, Song song, SongSelectionViewHolder holder, int position, MediaPlayerList mediaPlayerList) {
-            this.inputStream = inputStream;
-            this.audioFile = audioFile;
-            this.song = song;
-            this.holder = holder;
-            this.position = position;
-            this.mediaPlayerList = mediaPlayerList;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... voids) {
-            try {
-                FileOutputStream outputStream = new FileOutputStream(audioFile);
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-                outputStream.flush();
-                outputStream.close();
-                inputStream.close();
-                return true;
-            } catch (Exception e) {
-                Log.e("DownloadAudioTask", "Error durante la descarga del archivo de audio", e);
-                return false;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(Boolean success) {
-            MediaPlayerList.getInstance().setDownloading(song.getId(), false);
-            //MediaPlayerList.getInstance().updateButtonState(holder.btnPlayPause, song.getId());
-            MediaPlayerList.getInstance().notifySongStateChanged(song.getId());
-
-            boolean archivoDescargado = audioFile.exists() && audioFile.length() > 0;
-
-            if (archivoDescargado) {
-                Toast.makeText(context, "Descarga completa: " + song.getNombre(), Toast.LENGTH_SHORT).show();
-                holder.btnPlayPause.setImageResource(R.drawable.iconoplay);
-
-                for (Song s : songList) {
-                    if (s.getId() == song.getId()) {
-                        s.setLoaded(true);
-                        break;
-                    }
-                }
-
-                notifyItemChanged(position);
-                MediaPlayerList.getInstance().notifySongStateChanged(song.getId());
-
-            } else {
-                Log.e("DownloadAudioTask", "Error al descargar el archivo de audio");
-                Toast.makeText(context, "Error en la descarga de " + song.getNombre(), Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    // Métodos auxiliares (copiados de SongAdapter)
-    private String getFilePath(String youtubeUrl) {
-        if (youtubeUrl == null || youtubeUrl.isEmpty()) return null;
-
-        Pattern pattern = Pattern.compile("v=([a-zA-Z0-9_-]{11})|/videos/([a-zA-Z0-9_-]{11})|embed/([a-zA-Z0-9_-]{11})|youtu\\.be/([a-zA-Z0-9_-]{11})|/v/([a-zA-Z0-9_-]{11})|/e/([a-zA-Z0-9_-]{11})|watch\\?v=([a-zA-Z0-9_-]{11})|/shorts/([a-zA-Z0-9_-]{11})|/live/([a-zA-Z0-9_-]{11})");
-        Matcher matcher = pattern.matcher(youtubeUrl);
-
-        if (matcher.find()) {
-            for (int i = 1; i <= matcher.groupCount(); i++) {
-                if (matcher.group(i) != null) {
-                    return matcher.group(i);
-                }
-            }
-        }
-        return null;
-    }
+    // Métodos auxiliares
 
     private String formatoTiempo(int milisegundos) {
         int minutos = (milisegundos / 60000) % 60;
@@ -575,20 +401,7 @@ public class CancionSeleccionAdapter extends RecyclerView.Adapter<CancionSelecci
 
     private boolean esAudioValido(File file) {
         if (file == null || !file.exists()) return false;
-        if (file.length() < 50 * 1024) return false;
-
-        try {
-            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-            retriever.setDataSource(file.getAbsolutePath());
-            String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-            retriever.release();
-
-            if (durationStr == null) return false;
-            long durationMs = Long.parseLong(durationStr);
-            return durationMs > 0;
-        } catch (Exception e) {
-            return false;
-        }
+        return file.length() > 20 * 1024;
     }
 
     private int obtenerColorPorEmocion(EmocionDisponible data) {

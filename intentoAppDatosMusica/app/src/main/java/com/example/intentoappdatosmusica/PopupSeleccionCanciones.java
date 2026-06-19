@@ -38,13 +38,17 @@ public class PopupSeleccionCanciones extends Dialog {
         void onCancionesSeleccionadas(List<Integer> idsSeleccionados);
     }
 
+    private CancionSeleccionAdapter.OnLinkSongListener onLinkSongListener;
+
     public PopupSeleccionCanciones(@NonNull Context context, List<Song> canciones,
                                    List<Integer> idsPreseleccionados,
-                                   OnCancionesSeleccionadasListener listener) {
+                                   OnCancionesSeleccionadasListener listener,
+                                   CancionSeleccionAdapter.OnLinkSongListener linkSongListener) {
         super(context);
         this.listaCanciones = canciones;
         this.idsPreseleccionados = idsPreseleccionados;
         this.listener = listener;
+        this.onLinkSongListener = linkSongListener;
     }
 
     @Override
@@ -74,6 +78,7 @@ public class PopupSeleccionCanciones extends Dialog {
         Map<String, EmocionDisponible> emocionesMap = EmocionDisponible.cargarEmociones(csvFile);
 
         adapter = new CancionSeleccionAdapter(getContext(), listaCanciones, idsPreseleccionados, emocionesMap);
+        adapter.setOnLinkSongListener(onLinkSongListener);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setAdapter(adapter);
 

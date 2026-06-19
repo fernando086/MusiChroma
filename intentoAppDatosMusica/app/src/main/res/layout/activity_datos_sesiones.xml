@@ -48,12 +48,53 @@
             android:src="@drawable/iconoinformacion" />
     </LinearLayout>
 
+    <!-- Barra de Navegación de Grupo -->
+    <LinearLayout
+        android:id="@+id/navBarGrupo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/topBar"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="8dp"
+        android:visibility="gone"
+        android:background="?attr/colorPrimaryVariant">
+
+        <ImageButton
+            android:id="@+id/btnAnteriorSesion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_media_previous"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Sesión Anterior"
+            app:tint="@color/white"
+            android:layout_marginEnd="16dp" />
+
+        <TextView
+            android:id="@+id/tvNavGrupoInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sesión 1 de 5"
+            android:textColor="@color/white"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/btnSiguienteSesion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_media_next"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Sesión Siguiente"
+            app:tint="@color/white"
+            android:layout_marginStart="16dp" />
+    </LinearLayout>
+
     <!-- Menú de pestañas deslizable (debajo de la barra superior) -->
     <HorizontalScrollView
         android:id="@+id/scrollPestanas"
         android:layout_width="match_parent"
         android:layout_height="54dp"
-        android:layout_below="@id/topBar"
+        android:layout_below="@id/navBarGrupo"
         android:background="?android:attr/colorBackground"
         android:fillViewport="true"
         android:scrollbars="none">
@@ -148,6 +189,17 @@
                 android:minWidth="120dp"
                 android:backgroundTint="?attr/colorPrimary"
                 android:text="Extras"
+                android:textColor="@color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <Button
+                android:id="@+id/tabExportar"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:minWidth="120dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:text="Exportar"
                 android:textColor="@color/white"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp" />

@@ -30,6 +30,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.GridLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import androidx.appcompat.widget.SearchView;
 import android.widget.TextView;
@@ -52,12 +53,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -108,7 +111,25 @@ public class MenuPrincipalActivity extends AppCompatActivity {
 
     private ModoLista modoActual = ModoLista.CANCIONES;
 
+    private Button btnPaginaAnterior, btnPaginaSiguiente;
+    private TextView tvInfoPagina;
+    private ImageButton btnAgregarFijo;
+
+    private Song cancionParaVincular;
+
+    private final ActivityResultLauncher<Intent> linkAudioLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    android.net.Uri selectedAudioUri = result.getData().getData();
+                    if (selectedAudioUri != null && cancionParaVincular != null) {
+                        vincularAudioLocal(selectedAudioUri, cancionParaVincular);
+                    }
+                }
+            });
+
     ApiService apiService = ApiClient.getRetrofitInstance().create(ApiService.class);
+    private Map<String, EmocionDisponible> emocionesMapGlobal;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,77 +160,98 @@ public class MenuPrincipalActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         File csvFile = new File(getExternalFilesDir(null), "songdata/palabras/palabras_emociones.csv");
-        Map<String, EmocionDisponible> emocionesMap = EmocionDisponible.cargarEmociones(csvFile);
+        emocionesMapGlobal = EmocionDisponible.cargarEmociones(csvFile);
 
         // Inicializar la lista de canciones (puedes obtenerla desde tu base de datos o
         // Firebase)
         songList = new ArrayList<>(); // Esto es solo un ejemplo, en realidad cargarás datos reales
 
         // Inicializar el adaptador y asignarlo al RecyclerView
-        songAdapter = new SongAdapter(this, songList, datosMusicalesLauncher, emocionesMap);
+        songAdapter = new SongAdapter(this, songList, datosMusicalesLauncher, emocionesMapGlobal);
+
+        // Controles de Paginación y Botón Añadir Fijo
+        btnPaginaAnterior = findViewById(R.id.btnPaginaAnterior);
+        btnPaginaSiguiente = findViewById(R.id.btnPaginaSiguiente);
+        tvInfoPagina = findViewById(R.id.tvInfoPagina);
+        btnAgregarFijo = findViewById(R.id.btn_add_item);
+
+        songAdapter.setPaginationListener((currentPage, totalPages) -> {
+            if (modoActual == ModoLista.CANCIONES) {
+                actualizarBotoneriaPaginacion(currentPage, totalPages);
+            }
+        });
+
+        btnPaginaAnterior.setOnClickListener(v -> {
+            if (modoActual == ModoLista.CANCIONES) {
+                if (songAdapter != null)
+                    songAdapter.prevPage();
+            } else {
+                if (sesionAdapter != null)
+                    sesionAdapter.prevPage();
+            }
+        });
+
+        btnPaginaSiguiente.setOnClickListener(v -> {
+            if (modoActual == ModoLista.CANCIONES) {
+                if (songAdapter != null)
+                    songAdapter.nextPage();
+            } else {
+                if (sesionAdapter != null)
+                    sesionAdapter.nextPage();
+            }
+        });
+
+        songAdapter.setOnLinkSongListener(song -> {
+            cancionParaVincular = song;
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("audio/*");
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            linkAudioLauncher.launch(intent);
+        });
+
         sesionList = new ArrayList<>();
         sesionAdapter = new SesionAdapter(this, sesionList);
 
-        recyclerView.setAdapter(songAdapter);
-
-        songAdapter.setOnAddSongClickListener(() -> {
-            Intent intent = new Intent(MenuPrincipalActivity.this, NuevaCancionActivity.class);
-            startActivityForResult(intent, 100); // ← importante para recibir resultado más adelante
+        sesionAdapter.setPaginationListener((currentPage, totalPages) -> {
+            if (modoActual == ModoLista.SESIONES) {
+                actualizarBotoneriaPaginacion(currentPage, totalPages);
+            }
         });
 
+        recyclerView.setAdapter(songAdapter);
+
         // Listener para ingresar a una sesión
-        sesionAdapter.setOnIngresarClickListener(v -> {
-            int position = (int) v.getTag();
-
-            if (sesionList == null || sesionList.size() == 0) {
-                Toast.makeText(MenuPrincipalActivity.this, "No hay sesiones cargadas aún", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Evitar que se rompa con el botón "+"
-            if (position == 0)
-                return;
-
-            Sesion sesionSeleccionada = sesionList.get(position - 1);
-
+        sesionAdapter.setOnIngresarClickListener((v, sesionSeleccionada) -> {
             Intent intent = new Intent(MenuPrincipalActivity.this, DatosSesionesActivity.class);
             intent.putExtra("sesion", (Serializable) sesionSeleccionada);
             intent.putExtra("lista_canciones", (Serializable) songList);
+
+            // Agrupar sesiones para la navegación (Enfoque Automático)
+            ArrayList<Sesion> grupoSesiones = new ArrayList<>();
+            String inst = sesionSeleccionada.getInstitucionEducativa() == null ? ""
+                    : sesionSeleccionada.getInstitucionEducativa();
+            String grado = sesionSeleccionada.getGradoSeccion() == null ? "" : sesionSeleccionada.getGradoSeccion();
+
+            // Agrupar si al menos la institución o el grado están definidos
+            boolean validInst = !inst.trim().isEmpty();
+            boolean validGrado = !grado.trim().isEmpty() && !grado.contains("(Select)");
+            if (validInst || validGrado) {
+                for (Sesion s : sesionList) {
+                    String sInst = s.getInstitucionEducativa() == null ? "" : s.getInstitucionEducativa();
+                    String sGrado = s.getGradoSeccion() == null ? "" : s.getGradoSeccion();
+                    if (inst.trim().equalsIgnoreCase(sInst.trim()) && grado.trim().equalsIgnoreCase(sGrado.trim())) {
+                        grupoSesiones.add(s);
+                    }
+                }
+            }
+            intent.putExtra("grupo_sesiones", grupoSesiones);
+
             startActivityForResult(intent, 300); // ✅ Usamos el mismo requestCode
         });
 
-        // Listener para agregar nueva sesión
-        sesionAdapter.setOnAgregarClickListener(v -> {
-            // Crear una nueva sesión vacía
-            Sesion nuevaSesion = new Sesion();
-            nuevaSesion.setId(0);
-            nuevaSesion.setNombre("");
-            nuevaSesion.setObjetivosCustom("");
-            nuevaSesion.setObservaciones("");
-            nuevaSesion.setFechaHoraInicio("");
-            nuevaSesion.setFechaHoraFinal("");
-            nuevaSesion.setTipo(false);
-            nuevaSesion.setModo(false);
-            nuevaSesion.setCancionesIds(new ArrayList<>());
-            nuevaSesion.setCantidadCanciones(0);
-            nuevaSesion.setPalabras(new ArrayList<>());
-            nuevaSesion.setEstrellas(0);
-            nuevaSesion.setFavorito(false);
-            nuevaSesion.setColor(0);
-            nuevaSesion.setDificultad("");
+        ConfigurarBotonAgregarPorPestana();
 
-            // Abrir la interfaz vacía
-            Intent intent = new Intent(MenuPrincipalActivity.this, DatosSesionesActivity.class);
-            intent.putExtra("sesion", nuevaSesion);
-            intent.putExtra("lista_canciones", (Serializable) songList);
-            startActivityForResult(intent, 300); // ✅ Usamos el mismo requestCode
-        });
-
-        sesionAdapter.setOnCambiarColorClickListener((v, position) -> {
-            if (position == 0)
-                return; // Evitar el botón "+"
-
-            Sesion sesionSeleccionada = sesionList.get(position - 1);
+        sesionAdapter.setOnCambiarColorClickListener((v, sesionSeleccionada) -> {
             mostrarPopupColor(sesionSeleccionada);
         });
 
@@ -368,6 +410,21 @@ public class MenuPrincipalActivity extends AppCompatActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
+    private void mostrarDialogoLeyendaColores() {
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View view = inflater.inflate(R.layout.dialog_leyenda_colores, null);
+
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setView(view);
+
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+
+        Button btnEntendido = view.findViewById(R.id.btn_entendido_leyenda);
+        btnEntendido.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+    }
+
     private void mostrarPopupColor(Sesion sesion) {
         LayoutInflater inflater = LayoutInflater.from(this);
         View view = inflater.inflate(R.layout.popup_seleccionar_color, null);
@@ -379,6 +436,11 @@ public class MenuPrincipalActivity extends AppCompatActivity {
 
         TextView tvTitulo = view.findViewById(R.id.tvTituloColor);
         tvTitulo.setText("Selecciona un color para la sesión " + sesion.getId());
+
+        ImageView btnInfoLeyenda = view.findViewById(R.id.btn_info_leyenda);
+        if (btnInfoLeyenda != null) {
+            btnInfoLeyenda.setOnClickListener(v -> mostrarDialogoLeyendaColores());
+        }
 
         GridLayout gridColores = view.findViewById(R.id.gridColores);
 
@@ -404,6 +466,30 @@ public class MenuPrincipalActivity extends AppCompatActivity {
                         ? ColoresSesion.COLORES[colorBD - 1]
                         : null
         };
+
+        Button btnAutoseleccion = view.findViewById(R.id.btn_autoseleccion_color);
+        if (btnAutoseleccion != null) {
+            btnAutoseleccion.setOnClickListener(v -> {
+                int indexAuto = autoseleccionarColorPorPalabras(sesion);
+                if (indexAuto != -1 && indexAuto < ColoresSesion.COLORES.length) {
+                    if (ultimoCheck[0] != null)
+                        ultimoCheck[0].setVisibility(View.GONE);
+                    View itemView = gridColores.getChildAt(indexAuto);
+                    if (itemView != null) {
+                        ImageView check = itemView.findViewById(R.id.imgCheck);
+                        if (check != null) {
+                            check.setVisibility(View.VISIBLE);
+                            ultimoCheck[0] = check;
+                        }
+                    }
+                    colorSeleccionado[0] = ColoresSesion.COLORES[indexAuto];
+                    Toast.makeText(this, "Color seleccionado automáticamente", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Aún no hay palabras registradas o suficientes para deducir el color",
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+        }
 
         for (String hex : colores) {
             View itemView = inflater.inflate(R.layout.item_color_cuadro, gridColores, false);
@@ -469,19 +555,8 @@ public class MenuPrincipalActivity extends AppCompatActivity {
                             if (response.isSuccessful()) {
                                 sesion.setColor(finalNuevoColorIndex);
                                 Log.e("NUEVO_COLOR", "Índice guardado: " + finalNuevoColorIndex);
-                                // Buscar la posición real en el adapter
-                                int posicionEnAdapter = -1;
-                                for (int i = 0; i < sesionList.size(); i++) {
-                                    if (sesionList.get(i).getId() == sesion.getId()) {
-                                        posicionEnAdapter = i + 1; // +1 porque en el adapter hay un botón en la
-                                                                   // posición 0
-                                        break;
-                                    }
-                                }
-
-                                if (posicionEnAdapter != -1) {
-                                    sesionAdapter.notifyItemChanged(posicionEnAdapter);
-                                }
+                                // Usar el método global del adapter para actualizar todas las listas y la vista
+                                sesionAdapter.actualizarColorSesionGlobal(sesion.getId(), finalNuevoColorIndex);
 
                                 dialog.dismiss();
                             }
@@ -514,6 +589,10 @@ public class MenuPrincipalActivity extends AppCompatActivity {
             recyclerView.setAdapter(songAdapter);
             songAdapter.notifyDataSetChanged();
             actualizarColoresPestanas();
+            if (songAdapter != null) {
+                actualizarBotoneriaPaginacion(songAdapter.getCurrentPage(), songAdapter.getTotalPages());
+            }
+            ConfigurarBotonAgregarPorPestana();
         }
     }
 
@@ -523,6 +602,35 @@ public class MenuPrincipalActivity extends AppCompatActivity {
             recyclerView.setAdapter(sesionAdapter);
             sesionAdapter.notifyDataSetChanged();
             actualizarColoresPestanas();
+            if (sesionAdapter != null) {
+                actualizarBotoneriaPaginacion(sesionAdapter.getCurrentPage(), sesionAdapter.getTotalPages());
+            }
+            ConfigurarBotonAgregarPorPestana();
+        }
+    }
+
+    private void ConfigurarBotonAgregarPorPestana() {
+        if (btnAgregarFijo != null) {
+            btnAgregarFijo.setOnClickListener(v -> {
+                if (modoActual == ModoLista.CANCIONES) {
+                    Intent intent = new Intent(MenuPrincipalActivity.this, NuevaCancionActivity.class);
+                    startActivityForResult(intent, 100);
+                } else if (modoActual == ModoLista.SESIONES) {
+                    Sesion nuevaSesion = new Sesion();
+                    nuevaSesion.setId(0);
+                    nuevaSesion.setNombre("");
+                    nuevaSesion.setObjetivosCustom("");
+                    nuevaSesion.setObservaciones("");
+                    nuevaSesion.setFechaHoraInicio("");
+                    nuevaSesion.setFechaHoraFinal("");
+
+                    Intent intent = new Intent(MenuPrincipalActivity.this, DatosSesionesActivity.class);
+                    intent.putExtra("sesion", (Serializable) nuevaSesion);
+                    intent.putExtra("is_new_sesion", true);
+                    intent.putExtra("lista_canciones", (Serializable) songList);
+                    startActivityForResult(intent, 300);
+                }
+            });
         }
     }
 
@@ -533,6 +641,102 @@ public class MenuPrincipalActivity extends AppCompatActivity {
         } else {
             tabSesiones.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimary)));
             tabCanciones.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.gris_neutro)));
+        }
+    }
+
+    private int autoseleccionarColorPorPalabras(Sesion sesion) {
+        if (sesion.getPalabras() == null || sesion.getPalabras().isEmpty() || emocionesMapGlobal == null) {
+            return -1;
+        }
+
+        Map<String, Integer> conteoEmociones = new HashMap<>();
+
+        for (String palabra : sesion.getPalabras()) {
+            EmocionDisponible em = emocionesMapGlobal.get(palabra.toLowerCase().trim());
+            if (em != null && em.getEmocionBase() != null && em.getNivelArousal() != null) {
+                String key = em.getEmocionBase().toLowerCase() + "_" + em.getNivelArousal().toLowerCase();
+                conteoEmociones.put(key, conteoEmociones.getOrDefault(key, 0) + 1);
+            }
+        }
+
+        if (conteoEmociones.isEmpty())
+            return -1;
+
+        String keyDominante = null;
+        int maxCount = -1;
+        for (Map.Entry<String, Integer> entry : conteoEmociones.entrySet()) {
+            if (entry.getValue() > maxCount) {
+                maxCount = entry.getValue();
+                keyDominante = entry.getKey();
+            }
+        }
+
+        if (keyDominante == null)
+            return -1;
+
+        String[] partes = keyDominante.split("_");
+        if (partes.length < 2)
+            return -1;
+
+        String base = partes[0];
+        String nivel = partes[1];
+
+        int baseOffset = -1;
+        switch (base) {
+            case "joy":
+                baseOffset = 0;
+                break;
+            case "trust":
+                baseOffset = 3;
+                break;
+            case "fear":
+                baseOffset = 6;
+                break;
+            case "surprise":
+                baseOffset = 9;
+                break;
+            case "sadness":
+                baseOffset = 12;
+                break;
+            case "disgust":
+                baseOffset = 15;
+                break;
+            case "anger":
+                baseOffset = 18;
+                break;
+            case "anticipation":
+                baseOffset = 21;
+                break;
+        }
+
+        if (baseOffset == -1)
+            return -1;
+
+        int intOffset = 1;
+        switch (nivel) {
+            case "bajo":
+                intOffset = 0;
+                break;
+            case "medio":
+                intOffset = 1;
+                break;
+            case "alto":
+                intOffset = 2;
+                break;
+        }
+
+        return baseOffset + intOffset;
+    }
+
+    private void actualizarBotoneriaPaginacion(int currentPage, int totalPages) {
+        if (tvInfoPagina != null) {
+            tvInfoPagina.setText("Pág. " + currentPage + " / " + totalPages);
+        }
+        if (btnPaginaAnterior != null) {
+            btnPaginaAnterior.setEnabled(currentPage > 1);
+        }
+        if (btnPaginaSiguiente != null) {
+            btnPaginaSiguiente.setEnabled(currentPage < totalPages);
         }
     }
 
@@ -1023,30 +1227,34 @@ public class MenuPrincipalActivity extends AppCompatActivity {
                                 listaSecciones.add(sec);
                             }
 
-                            // Verificar si el archivo existe
-                            String fileName = getFilePath(enlace);
-
-                            String filePath;
-
-                            if (fileName != null) {
-                                // Es un enlace de YouTube, se agrega ".mp3"
-                                filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/"
-                                        + fileName + ".mp3";
-                            } else {
-                                // Es un archivo local, se usa el nombre del archivo directamente
-                                filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/"
-                                        + cancionObject.get("nombre").getAsString();
-                            }
-
-                            File audioFile = new File(filePath);
-                            boolean fileExists = audioFile.exists();
-                            Log.e("menu: existe archivo", filePath + " = " + fileExists);
-
-                            // Crea un nuevo objeto Song y agrégalo a la lista (para que SongAdapter pueda
-                            // procesar y mostrar en interfaz)
+                            // Crea un nuevo objeto Song y agrégalo a la lista
                             Song cancion = new Song(id, nombre, autor, album, enlace, comentarioGeneral,
                                     estadoCgPublicado, estadoPublicado, listaSecciones, fecha_creacion,
                                     fecha_ultima_edicion);
+
+                            String filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/"
+                                    + cancion.getSafeFileName();
+
+                            File audioFile = new File(filePath);
+                            boolean fileExists = audioFile.exists();
+                            
+                            // Auto-Enlazado Post-Sincronización
+                            if (!fileExists) {
+                                android.content.SharedPreferences linkPrefs = getSharedPreferences("AutoLinkPrefs", android.content.Context.MODE_PRIVATE);
+                                String rutaOriginal = linkPrefs.getString("local_song_" + cancion.getId(), null);
+                                if (rutaOriginal != null) {
+                                    File original = new File(rutaOriginal);
+                                    if (original.exists()) {
+                                        original.renameTo(audioFile);
+                                        fileExists = true;
+                                        // Limpiamos la entrada para no acumular basura
+                                        linkPrefs.edit().remove("local_song_" + cancion.getId()).apply();
+                                    }
+                                }
+                            }
+                            
+                            Log.e("menu: existe archivo", filePath + " = " + fileExists);
+
                             cancion.setLoaded(fileExists); // Asigna true si el archivo existe, false si no
                             canciones.add(cancion);
 
@@ -1275,7 +1483,7 @@ public class MenuPrincipalActivity extends AppCompatActivity {
         }
     }
 
-    // Mét0do para inicializar el menú lateral
+    // Método para inicializar el menú lateral
     private void setupDrawerMenu() {
         drawerLayout = findViewById(R.id.drawer_layout);
         navigationView = findViewById(R.id.navigation_view);
@@ -1463,7 +1671,7 @@ public class MenuPrincipalActivity extends AppCompatActivity {
         while (iterator.hasNext()) {
             Song song = iterator.next();
             String filePath = "/storage/emulated/0/Android/data/com.example.intentoappdatosmusica/files/media/"
-                    + song.getFilePath() + ".mp3";
+                    + song.getSafeFileName();
             File audioFile = new File(filePath);
 
             if (!audioFile.exists()) {
@@ -1580,6 +1788,36 @@ public class MenuPrincipalActivity extends AppCompatActivity {
             }
         }
         return ids;
+    }
+
+    private void vincularAudioLocal(android.net.Uri uri, Song song) {
+        try {
+            InputStream is = getContentResolver().openInputStream(uri);
+            if (is == null) {
+                Toast.makeText(this, "No se pudo leer el archivo seleccionado.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            File destFile = new File(getExternalFilesDir("media"), song.getSafeFileName());
+            FileOutputStream fos = new FileOutputStream(destFile);
+            byte[] buffer = new byte[4096];
+            int length;
+            while ((length = is.read(buffer)) > 0) {
+                fos.write(buffer, 0, length);
+            }
+            fos.flush();
+            fos.close();
+            is.close();
+
+            Toast.makeText(this, "Archivo vinculado exitosamente.", Toast.LENGTH_SHORT).show();
+            // Refrescar el estado en el adapter
+            song.setLoaded(true);
+            MediaPlayerList.getInstance().notifySongStateChanged(song.getId());
+            songAdapter.notifyDataSetChanged();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error al vincular el archivo", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
